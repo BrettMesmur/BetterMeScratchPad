@@ -30,7 +30,7 @@
       border: 1px solid #e5e7eb;
     }
     header { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-    .title { font-size: 18px; font-weight: 600 }
+    .title { font-size: 22px; font-weight: 600 }
     .week-nav { display: flex; gap: 8px; align-items: center; }
     .btn {
       border: 1px solid #e5e7eb; background: #fff; color: var(--fg);
@@ -59,6 +59,13 @@
       display: grid; gap: 10px;
     }
     .week-label { color: var(--muted); font-size: 13px; text-align: center }
+    .range-label {
+      color: var(--muted);
+      font-size: 12px;
+      text-align: center;
+      letter-spacing: .02em;
+      margin-top: -2px;
+    }
     .week-strip { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; }
     .day {
       background: #f1f5f9; border: 1px solid #e2e8f0; border-radius: 10px; padding: 8px;
@@ -83,7 +90,6 @@
       <div class="title">Times Resisted</div>
       <div class="week-nav">
         <button id="prevWeek" class="btn" aria-label="Previous week">‹</button>
-        <div id="range" class="btn" style="pointer-events:none"></div>
         <button id="nextWeek" class="btn" aria-label="Next week">›</button>
       </div>
     </header>
@@ -97,6 +103,7 @@
 
     <section class="week">
       <div class="week-label">This week</div>
+      <div id="range" class="range-label"></div>
       <div id="weekStrip" class="week-strip"></div>
     </section>
   </main>
