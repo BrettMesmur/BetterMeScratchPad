@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Counter</title>
+  <link rel="manifest" href="manifest.json">
+  <style>
+    body { font-family: system-ui, Arial, sans-serif; margin: 2rem; }
+    .card { max-width: 420px; padding: 1.25rem; border: 1px solid #ddd; border-radius: 12px; }
+    button { font-size: 18px; padding: 0.75rem 1rem; border-radius: 10px; border: none; cursor: pointer; }
+    #incBtn { background: #10b981; color: white; }
+    #incBtn:disabled { opacity: .6; cursor: progress; }
+    .value { font-size: 64px; margin: 1rem 0; }
+    .muted { color: #666; font-size: 14px; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>Shared Counter</h1>
+    <div class="value" id="count">—</div>
+    <button id="incBtn">+1</button>
+    <div class="muted" id="status">Connecting…</div>
+  </div>
+
+  <!-- Firebase (modular SDK) -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-app.js";
+    import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-auth.js";
+    import {
+      getFirestore, doc, onSnapshot, setDoc, updateDoc, increment, getDoc
+    } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-firestore.js";
+
+    // 1) PASTE YOUR CONFIG HERE (from Firebase Console)
+    const firebaseConfig = {
+      apiKey: "PASTE",
+      authDomain: "PASTE.firebaseapp.com",
+      projectId: "PASTE",
+      storageBucket: "PASTE.appspot.com",
+      messagingSenderId: "PASTE",
+      appId: "PASTE"
+    };
+
+    // 2) Init
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    const statusEl = document.getElementById('status');
+    const countEl  = document.getElementById('count');
+    const incBtn   = document.getElementById('incBtn');
+
+    // Choose a single document to hold the counter
+    const counterRef = doc(db, "counters", "main");
+
+    // 3) Sign in anonymously so rules can allow writes
+    onAuthStateChanged(auth, async (user) => {
+      if (!user) await signInAnonymously(auth);
+      statusEl.textContent = "Online";
+    });
+
+    // 4) Ensure doc exists, then live-subscribe
+    (async function ensureDoc() {
+      const snap = await getDoc(counterRef);
+      if (!snap.exists()) {
+        await setDoc(counterRef, { value: 0 });
+      }
+      onSnapshot(counterRef, (s) => {
+        countEl.textContent = s.data()?.value ?? 0;
+      });
+    })().catch(e => {
+      console.error(e);
+      statusEl.textContent = "Error: " + e.message;
+    });
+
+    // 5) Atomic increment on click
+    incBtn.addEventListener('click', async () => {
+      try {
+        incBtn.disabled = true;
+        await updateDoc(counterRef, { value: increment(1) });
+      } catch (e) {
+        console.error(e);
+        alert("Increment failed: " + e.message);
+      } finally {
+        incBtn.disabled = false;
+      }
+    });
+
+    // Optional: register service worker for instant launches when added to home screen
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('./sw.js').catch(()=>{});
+    }
+  </script>
+</body>
+</html>
