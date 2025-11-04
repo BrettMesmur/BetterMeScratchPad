@@ -102,7 +102,7 @@
     </section>
 
     <section class="week">
-      <div class="week-label">This week</div>
+      <div class="week-label" aria-hidden="true"></div>
       <div id="range" class="range-label"></div>
       <div id="weekStrip" class="week-strip"></div>
     </section>
@@ -161,7 +161,7 @@
     onAuthStateChanged(getAuth(), async (user) => {
       if (!user) await signInAnonymously(auth);
       uid = (user || auth.currentUser).uid;
-      statusEl.textContent = "Online";
+      statusEl.textContent = "";
       init();
     });
 
