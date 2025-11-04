@@ -29,9 +29,9 @@
       border-radius: 16px; padding: 20px; box-shadow: 0 10px 30px rgba(2,6,23,.06);
       border: 1px solid #e5e7eb;
     }
-    header { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-    .title { font-size: 22px; font-weight: 600 }
-    .week-nav { display: flex; gap: 8px; align-items: center; }
+    header { text-align: center; margin-bottom: 12px; }
+    .title { font-size: 22px; font-weight: 600; }
+    .week-nav { display: flex; gap: 8px; align-items: center; justify-content: center; margin-top: 24px; }
     .btn {
       border: 1px solid #e5e7eb; background: #fff; color: var(--fg);
       padding: 8px 12px; border-radius: 10px; cursor: pointer;
@@ -88,10 +88,6 @@
   <main class="app">
     <header>
       <div class="title">Times Resisted</div>
-      <div class="week-nav">
-        <button id="prevWeek" class="btn" aria-label="Previous week">‹</button>
-        <button id="nextWeek" class="btn" aria-label="Next week">›</button>
-      </div>
     </header>
 
     <section class="today">
@@ -106,6 +102,11 @@
       <div id="range" class="range-label"></div>
       <div id="weekStrip" class="week-strip"></div>
     </section>
+
+    <div class="week-nav">
+      <button id="prevWeek" class="btn" aria-label="Previous week">‹</button>
+      <button id="nextWeek" class="btn" aria-label="Next week">›</button>
+    </div>
   </main>
 
   <script type="module">
