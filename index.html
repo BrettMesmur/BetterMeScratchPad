@@ -176,6 +176,8 @@
       rangeEl.textContent = `${s.toLocaleDateString(undefined,{month:'short',day:'numeric'})} – ${e.toLocaleDateString(undefined,{month:'short',day:'numeric'})}`;
     }
 
+    let currentWeekCells = new Map();
+
     async function init() {
       // TODAY live count subscription
       todayLabelEl.textContent = `Today • ${nice(today)}`;
@@ -184,6 +186,8 @@
       onValue(todayRef, (snap) => {
         const val = snap.exists() ? snap.val() : 0;
         todayCountEl.textContent = val;
+        const cell = currentWeekCells.get(todayKey);
+        if (cell) cell.textContent = val;
       });
 
       // Increment button (atomic +1)
@@ -218,6 +222,7 @@
                                              : ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
 
       // Build 7 day cells first (so UI appears instantly)
+      currentWeekCells = new Map();
       const cells = [];
       for (let i=0;i<7;i++) {
         const cell = document.createElement('div'); cell.className = 'day';
@@ -225,14 +230,16 @@
         const mini = document.createElement('div'); mini.className = 'mini'; mini.textContent = '—';
         cell.appendChild(dow); cell.appendChild(mini);
         weekStripEl.appendChild(cell);
-        cells.push({ mini });
+        const d = addDays(viewingWeekStart, i);
+        const key = ymd(d);
+        currentWeekCells.set(key, mini);
+        cells.push({ mini, key });
       }
 
       // Fetch the seven keys in parallel (one small read per day)
       const promises = [];
       for (let i=0;i<7;i++) {
-        const d = addDays(viewingWeekStart, i);
-        promises.push(get(child(dbRoot, `${ymd(d)}/count`)));
+        promises.push(get(child(dbRoot, `${cells[i].key}/count`)));
       }
       const snaps = await Promise.all(promises);
       snaps.forEach((s, i) => { cells[i].mini.textContent = s.exists() ? s.val() : 0; });
