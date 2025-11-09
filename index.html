@@ -1,93 +1,19 @@
 <!doctype html>
 <html lang="en">
 <head>
-    <link rel="manifest" href="./manifest.json">
-<meta name="theme-color" content="#10b981">
-<link rel="icon" href="./icons/icon-192.png">
+  <link rel="manifest" href="./manifest.json">
+  <meta name="theme-color" content="#10b981">
+  <link rel="icon" href="./icons/icon-192.png">
 
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Daily Tap Counter</title>
-  <style>
-    :root {
-      --fg: #0f172a;       /* slate-900 */
-      --muted: #64748b;    /* slate-500 */
-      --accent: #10b981;   /* emerald-500 */
-      --card: #ffffff;
-      --bg: #f8fafc;       /* slate-50 */
-      --ring: rgba(16,185,129,.35);
-    }
-    * { box-sizing: border-box }
-    html, body { height: 100% }
-    body {
-      margin: 0; background: var(--bg); color: var(--fg);
-      font: 16px/1.4 system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-      display: grid; place-items: center; padding: 20px;
-    }
-    .app {
-      width: 100%; max-width: 560px; background: var(--card);
-      border-radius: 16px; padding: 20px; box-shadow: 0 10px 30px rgba(2,6,23,.06);
-      border: 1px solid #e5e7eb;
-    }
-    header { text-align: center; margin-bottom: 12px; }
-    .title { font-size: 22px; font-weight: 600; }
-    .week-nav { display: flex; gap: 8px; align-items: center; justify-content: center; margin-top: 24px; }
-    .btn {
-      border: 1px solid #e5e7eb; background: #fff; color: var(--fg);
-      padding: 8px 12px; border-radius: 10px; cursor: pointer;
-    }
-    .btn:active { transform: translateY(1px) }
-    .btn[disabled] { opacity:.6; cursor: not-allowed }
-
-    .today {
-      display: grid; gap: 8px; text-align: center; margin: 18px 0 14px;
-    }
-    .count {
-      font-size: clamp(56px, 10vw, 84px);
-      font-weight: 800; letter-spacing: -0.02em;
-    }
-    .tap {
-      width: 100%; padding: 18px 20px; font-size: 22px; font-weight: 700;
-      border: none; border-radius: 14px; color: white; background: var(--accent);
-      cursor: pointer; box-shadow: 0 8px 20px var(--ring);
-    }
-    .tap:active { transform: translateY(1px) }
-    .status { color: var(--muted); font-size: 13px; text-align: center; margin-top: 8px }
-
-    .week {
-      margin-top: 18px; padding-top: 14px; border-top: 1px dashed #e5e7eb;
-      display: grid; gap: 10px;
-    }
-    .week-label { color: var(--muted); font-size: 13px; text-align: center }
-    .range-label {
-      color: var(--muted);
-      font-size: 12px;
-      text-align: center;
-      letter-spacing: .02em;
-      margin-top: -2px;
-    }
-    .week-strip { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; }
-    .day {
-      background: #f1f5f9; border: 1px solid #e2e8f0; border-radius: 10px; padding: 8px;
-      display: grid; gap: 6px; justify-items: center;
-    }
-    .dow { font-size: 11px; color: var(--muted); letter-spacing: .05em }
-    .mini {
-      font-size: 18px; font-weight: 700;
-    }
-    @media (prefers-color-scheme: dark) {
-      :root { --card: #0b1220; --bg: #050a18; --fg: #e5e7eb; --muted: #94a3b8 }
-      .app { border-color: #0b1220; box-shadow: 0 10px 30px rgba(0,0,0,.35) }
-      .btn { background:#0f172a; border-color:#1f2937; color:#e5e7eb }
-      .day { background:#0f172a; border-color:#1f2937 }
-      .week { border-top-color: #1f2937 }
-    }
-  </style>
+  <link rel="stylesheet" href="./styles.css">
 </head>
 <body>
   <main class="app">
     <header>
-      <div class="title">Times Resisted</div>
+      <div class="title">Times You Gained Control</div>
     </header>
 
     <section class="today">
@@ -109,141 +35,6 @@
     </div>
   </main>
 
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-app.js";
-    import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-auth.js";
-    import { getDatabase, ref, onValue, runTransaction, get, child } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-database.js";
-
-  // Your web app's Firebase configuration
-  // For Firebase JS SDK v7.20.0 and later, measurementId is optional
-  const firebaseConfig = {
-    apiKey: "AIzaSyBjDvBqWHphOtEiI94ruYeRTXdaeeMRTQs",
-    authDomain: "bettermescratchpad.firebaseapp.com",
-    databaseURL: "https://bettermescratchpad-default-rtdb.firebaseio.com",
-    projectId: "bettermescratchpad",
-    storageBucket: "bettermescratchpad.firebasestorage.app",
-    messagingSenderId: "516986845541",
-    appId: "1:516986845541:web:75cd67831a7cc9d8f1498c",
-    measurementId: "G-QLQBD1T7YC"
-  };
-
-    // ---- Preferences ----
-    const WEEK_STARTS_ON_SUNDAY = false; // set false for Monday
-
-    // ---- Setup ----
-    const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
-    const db = getDatabase(app);
-
-    const el = (id) => document.getElementById(id);
-    const tapBtn = el('tap');
-    const statusEl = el('status');
-    const todayCountEl = el('todayCount');
-    const todayLabelEl = el('todayLabel');
-    const weekStripEl = el('weekStrip');
-    const rangeEl = el('range');
-    const prevWeekBtn = el('prevWeek');
-    const nextWeekBtn = el('nextWeek');
-
-    // Date helpers (local time)
-    const pad = (n) => String(n).padStart(2,'0');
-    const ymd = (d) => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
-    const nice = (d) => d.toLocaleDateString(undefined, { weekday:'long', month:'short', day:'numeric' });
-
-    const startOfWeek = (d) => {
-      const day = d.getDay(); // 0 Sun .. 6 Sat
-      const diff = WEEK_STARTS_ON_SUNDAY ? day : (day === 0 ? 6 : day-1);
-      const s = new Date(d); s.setHours(0,0,0,0); s.setDate(s.getDate() - diff); return s;
-    };
-    const addDays = (d, n) => { const x = new Date(d); x.setDate(x.getDate()+n); return x; };
-
-    // Auth
-    let uid = null;
-    onAuthStateChanged(getAuth(), async (user) => {
-      if (!user) await signInAnonymously(auth);
-      uid = (user || auth.currentUser).uid;
-      statusEl.textContent = "";
-      init();
-    });
-
-    // State
-    let today = new Date(); today.setHours(0,0,0,0);
-    let viewingWeekStart = startOfWeek(today);
-
-    function updateRangeLabel() {
-      const s = viewingWeekStart;
-      const e = addDays(s, 6);
-      rangeEl.textContent = `${s.toLocaleDateString(undefined,{month:'short',day:'numeric'})} – ${e.toLocaleDateString(undefined,{month:'short',day:'numeric'})}`;
-    }
-
-    let currentWeekCells = new Map();
-
-    async function init() {
-      // TODAY live count subscription
-      todayLabelEl.textContent = `Today • ${nice(today)}`;
-      const todayKey = ymd(today);
-      const todayRef = ref(db, `users/${uid}/daily/${todayKey}/count`);
-      onValue(todayRef, (snap) => {
-        const val = snap.exists() ? snap.val() : 0;
-        todayCountEl.textContent = val;
-        const cell = currentWeekCells.get(todayKey);
-        if (cell) cell.textContent = val;
-      });
-
-      // Increment button (atomic +1)
-      tapBtn.addEventListener('click', async () => {
-        tapBtn.disabled = true;
-        try {
-          await runTransaction(todayRef, (cur) => (cur || 0) + 1);
-        } catch (e) {
-          alert('Increment failed: ' + e.message);
-        } finally {
-          tapBtn.disabled = false;
-        }
-      });
-
-      // Week UI
-      prevWeekBtn.onclick = () => { viewingWeekStart = addDays(viewingWeekStart, -7); renderWeek(); };
-      nextWeekBtn.onclick = () => {
-        const next = addDays(viewingWeekStart, 7);
-        // Don’t go past current week
-        if (startOfWeek(today) <= next) viewingWeekStart = startOfWeek(today);
-        else viewingWeekStart = next;
-        renderWeek();
-      };
-      renderWeek();
-    }
-
-    async function renderWeek() {
-      updateRangeLabel();
-      weekStripEl.innerHTML = '';
-      const dbRoot = ref(db, `users/${uid}/daily`);
-      const dayNames = WEEK_STARTS_ON_SUNDAY ? ['Sun','Mon','Tue','Wed','Thu','Fri','Sat']
-                                             : ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
-
-      // Build 7 day cells first (so UI appears instantly)
-      currentWeekCells = new Map();
-      const cells = [];
-      for (let i=0;i<7;i++) {
-        const cell = document.createElement('div'); cell.className = 'day';
-        const dow = document.createElement('div'); dow.className = 'dow'; dow.textContent = dayNames[i];
-        const mini = document.createElement('div'); mini.className = 'mini'; mini.textContent = '—';
-        cell.appendChild(dow); cell.appendChild(mini);
-        weekStripEl.appendChild(cell);
-        const d = addDays(viewingWeekStart, i);
-        const key = ymd(d);
-        currentWeekCells.set(key, mini);
-        cells.push({ mini, key });
-      }
-
-      // Fetch the seven keys in parallel (one small read per day)
-      const promises = [];
-      for (let i=0;i<7;i++) {
-        promises.push(get(child(dbRoot, `${cells[i].key}/count`)));
-      }
-      const snaps = await Promise.all(promises);
-      snaps.forEach((s, i) => { cells[i].mini.textContent = s.exists() ? s.val() : 0; });
-    }
-  </script>
+  <script type="module" src="./app.js"></script>
 </body>
 </html>
