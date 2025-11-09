@@ -1,6 +1,6 @@
 {
-  "name": "Daily Taps",
-  "short_name": "Taps",
+  "name": "Gain Control",
+  "short_name": "Gains",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
