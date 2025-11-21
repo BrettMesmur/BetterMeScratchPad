@@ -97,6 +97,7 @@ export class AppComponent implements OnInit, OnDestroy {
   selectedPointsDayLabel = '';
   pointsWeekDays: WeekDay[] = [];
   pointsRangeLabel = '';
+  toggleLocks: Record<string, boolean> = {};
 
   readonly ymd = ymd;
 
@@ -180,39 +181,53 @@ export class AppComponent implements OnInit, OnDestroy {
     if (!this.uid) return;
     const dayKey = ymd(this.selectedPointsDay);
     const refPath = ref(this.db, `users/${this.uid}/points/days/${dayKey}`);
-    const prevStates = this.pointsDayStates;
+    const prevStates = { ...this.pointsDayStates };
     const prevTotal = this.pointsDayTotal;
 
+    if (this.toggleLocks[action.id]) return;
+    this.toggleLocks = { ...this.toggleLocks, [action.id]: true };
+
     try {
-      const snap = await get(refPath);
-      const rawVal = snap.exists() ? snap.val() : null;
-      const current: PointsDayData = rawVal && typeof rawVal === 'object'
-        ? { total: Number(rawVal.total) || 0, actions: rawVal.actions || {} }
-        : { total: Number(rawVal) || 0, actions: {} };
+      const txn = await runTransaction(refPath, (cur) => {
+        const current: PointsDayData = cur && typeof cur === 'object'
+          ? { total: Number(cur.total) || 0, actions: cur.actions || {} }
+          : { total: Number(cur) || 0, actions: {} };
 
-      const nextActions = { ...current.actions } as Record<string, boolean>;
-      let nextTotal = current.total;
-      const isActive = !!current.actions[action.id];
+        const nextActions = { ...current.actions } as Record<string, boolean>;
+        let nextTotal = current.total;
+        const isActive = !!current.actions[action.id];
 
-      if (isActive) {
-        nextTotal = Math.max(0, nextTotal - action.points);
-        delete nextActions[action.id];
-      } else {
-        nextTotal += action.points;
-        nextActions[action.id] = true;
+        if (isActive) {
+          nextTotal = Math.max(0, nextTotal - action.points);
+          delete nextActions[action.id];
+        } else {
+          nextTotal += action.points;
+          nextActions[action.id] = true;
+        }
+
+        return { total: nextTotal, actions: nextActions } as PointsDayData;
+      }, { applyLocally: false });
+
+      if (!txn.committed || !txn.snapshot.exists()) {
+        throw new Error('Points update was not committed');
       }
 
-      await set(refPath, { total: nextTotal, actions: nextActions });
+      // If the user switched days while the transaction was running, skip UI updates.
+      if (ymd(this.selectedPointsDay) !== dayKey) return;
 
-      this.pointsDayStates = nextActions;
-      this.pointsDayTotal = nextTotal;
-      this.pointsWeekDays = this.pointsWeekDays.map((day) => day.key === dayKey ? { ...day, count: nextTotal } : day);
+      const val = txn.snapshot.val() as PointsDayData;
+      this.pointsDayStates = val.actions || {};
+      this.pointsDayTotal = Number(val.total) || 0;
+      this.pointsWeekDays = this.pointsWeekDays.map((day) => day.key === dayKey ? { ...day, count: this.pointsDayTotal } : day);
     } catch (e) {
       console.error('Toggle failed', e);
       this.status = 'Unable to update points right now. Please try again.';
       this.pointsDayStates = prevStates;
       this.pointsDayTotal = prevTotal;
       this.pointsWeekDays = this.pointsWeekDays.map((day) => day.key === dayKey ? { ...day, count: prevTotal } : day);
+    } finally {
+      const { [action.id]: _, ...rest } = this.toggleLocks;
+      this.toggleLocks = rest;
     }
   }
 
