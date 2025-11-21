@@ -7,32 +7,95 @@
 
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Daily Tap Counter</title>
+  <title>Daily Progress</title>
   <link rel="stylesheet" href="./styles.css">
 </head>
 <body>
   <main class="app">
-    <header>
-      <div class="title">Times You Gained Control</div>
+    <header class="app-header">
+      <div class="title">Daily Progress</div>
+      <nav class="tabs" role="tablist">
+        <button class="tab active" data-tab="points" role="tab" aria-selected="true">Points Earned</button>
+        <button class="tab" data-tab="times" role="tab" aria-selected="false">Times Gained Control</button>
+        <button class="tab" data-tab="config" role="tab" aria-selected="false">Configuration</button>
+      </nav>
     </header>
 
-    <section class="today">
-      <div id="todayLabel" class="week-label"></div>
-      <div id="todayCount" class="count">—</div>
-      <button id="tap" class="tap">+1</button>
-      <div id="status" class="status">Connecting…</div>
+    <div id="globalBanner" class="banner" hidden></div>
+
+    <section id="tab-points" class="tab-panel active" role="tabpanel">
+      <div class="section-card">
+        <div class="section-heading">
+          <div>
+            <div id="pointsDayLabel" class="muted"></div>
+            <div class="section-title">Points Earned</div>
+          </div>
+          <div class="chip" id="pointsDayTotal">—</div>
+        </div>
+        <div id="pointsActions" class="actions-list"></div>
+      </div>
+
+      <section class="week">
+        <div class="week-label">This Week</div>
+        <div id="pointsRange" class="range-label"></div>
+        <div id="pointsWeekStrip" class="week-strip selectable"></div>
+        <div class="week-nav">
+          <button id="pointsPrevWeek" class="btn" aria-label="Previous week">‹</button>
+          <button id="pointsNextWeek" class="btn" aria-label="Next week">›</button>
+        </div>
+      </section>
     </section>
 
-    <section class="week">
-      <div class="week-label" aria-hidden="true"></div>
-      <div id="range" class="range-label"></div>
-      <div id="weekStrip" class="week-strip"></div>
+    <section id="tab-times" class="tab-panel" role="tabpanel">
+      <div class="section-card">
+        <div class="section-heading">
+          <div>
+            <div id="todayLabel" class="muted"></div>
+            <div class="section-title">Times You Gained Control</div>
+          </div>
+          <div id="todayCount" class="count">—</div>
+        </div>
+        <button id="tap" class="tap">+1</button>
+        <div id="status" class="status">Connecting…</div>
+      </div>
+
+      <section class="week">
+        <div class="week-label" aria-hidden="true">This Week</div>
+        <div id="range" class="range-label"></div>
+        <div id="weekStrip" class="week-strip"></div>
+        <div class="week-nav">
+          <button id="prevWeek" class="btn" aria-label="Previous week">‹</button>
+          <button id="nextWeek" class="btn" aria-label="Next week">›</button>
+        </div>
+      </section>
     </section>
 
-    <div class="week-nav">
-      <button id="prevWeek" class="btn" aria-label="Previous week">‹</button>
-      <button id="nextWeek" class="btn" aria-label="Next week">›</button>
-    </div>
+    <section id="tab-config" class="tab-panel" role="tabpanel">
+      <div class="section-card">
+        <div class="section-heading">
+          <div class="section-title">Global Banner</div>
+        </div>
+        <label class="field">
+          <div class="field-label">Banner message</div>
+          <textarea id="bannerInput" rows="2" placeholder="Enter a short message to show under the menu"></textarea>
+        </label>
+        <div class="actions-row">
+          <button id="saveBanner" class="btn primary">Save Banner</button>
+        </div>
+      </div>
+
+      <div class="section-card">
+        <div class="section-heading">
+          <div class="section-title">Points Structure</div>
+          <div class="muted">Drag to reorder</div>
+        </div>
+        <div class="config-actions">
+          <button id="addRootAction" class="btn">+ Action</button>
+          <button id="addGroup" class="btn">+ Group</button>
+        </div>
+        <div id="configList" class="config-list"></div>
+      </div>
+    </section>
   </main>
 
   <script type="module" src="./app.js"></script>
