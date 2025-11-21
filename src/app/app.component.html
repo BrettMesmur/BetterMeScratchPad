@@ -1,0 +1,28 @@
+<main class="app">
+  <header>
+    <div class="title">Times You Gained Control</div>
+  </header>
+
+  <section class="today">
+    <div class="week-label">{{ todayLabel }}</div>
+    <div class="count">{{ todayCount }}</div>
+    <button class="tap" (click)="tap()" [disabled]="tapBusy || !uid">+1</button>
+    <div class="status">{{ status || ' ' }}</div>
+  </section>
+
+  <section class="week">
+    <div class="week-label" aria-hidden="true"></div>
+    <div class="range-label">{{ rangeLabel }}</div>
+    <div class="week-strip">
+      <div class="day" *ngFor="let day of weekDays">
+        <div class="dow">{{ day.label }}</div>
+        <div class="mini">{{ day.count }}</div>
+      </div>
+    </div>
+  </section>
+
+  <div class="week-nav">
+    <button class="btn" aria-label="Previous week" (click)="prevWeek()">‹</button>
+    <button class="btn" aria-label="Next week" (click)="nextWeek()" [disabled]="!canGoNextWeek">›</button>
+  </div>
+</main>
