@@ -13,6 +13,8 @@ const firebaseConfig = {
   measurementId: "G-QLQBD1T7YC"
 };
 
+const uuid = () => (crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2));
+
 const WEEK_STARTS_ON_SUNDAY = false;
 const DEFAULT_CONFIG = {
   banner: "",
@@ -34,8 +36,6 @@ const DEFAULT_CONFIG = {
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getDatabase(app);
-
-const uuid = () => (crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2));
 
 const el = (id) => document.getElementById(id);
 const tabs = document.querySelectorAll('.tab');
