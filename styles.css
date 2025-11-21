@@ -32,8 +32,8 @@ body {
   padding: 10px 12px; border-radius: 12px; cursor: pointer; font-weight: 600;
 }
 .tab.active {
-  border-color: var(--accent); color: #065f46; background: #ecfdf3;
-  box-shadow: 0 4px 12px var(--ring);
+  border-color: #cbd5e1; color: var(--fg); background: #e2e8f0;
+  box-shadow: none;
 }
 
 .banner {
@@ -91,6 +91,7 @@ body {
   display: grid; gap: 6px; justify-items: center;
 }
 .day.selected { border-color: var(--accent); box-shadow: 0 0 0 3px var(--ring); background: #ecfdf3; }
+.week-strip.subtle .day.selected { border-color: #cbd5e1; box-shadow: none; background: #e2e8f0; }
 .dow { font-size: 11px; color: var(--muted); letter-spacing: .05em }
 .mini {
   font-size: 18px; font-weight: 700;
@@ -109,11 +110,19 @@ body {
   border: 1px solid #e2e8f0; border-radius: 12px; padding: 12px 14px;
   display: flex; justify-content: space-between; align-items: center; gap: 12px;
   background: #fff;
+  color: var(--fg);
 }
-.action-row.active { background: #ecfdf3; border-color: var(--accent); box-shadow: 0 6px 14px rgba(16,185,129,.15); }
+.action-row.active {
+  background: var(--accent);
+  border-color: var(--accent-strong);
+  box-shadow: 0 8px 16px rgba(16,185,129,.35);
+  color: #ecfeff;
+}
 .action-texts { display: grid; gap: 2px; }
 .action-title { font-weight: 700; }
+.action-row.active .action-title { color: #ecfeff; }
 .action-points { color: var(--muted); font-size: 14px; }
+.action-row.active .action-points { color: #d1fae5; }
 
 .group { border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; }
 .group-header {
@@ -145,11 +154,12 @@ textarea { width: 100%; border-radius: 10px; border: 1px solid #e2e8f0; padding:
   :root { --card: #0b1220; --bg: #050a18; --fg: #e5e7eb; --muted: #94a3b8; --banner: #450a0a; --banner-text: #fecdd3 }
   .app { border-color: #0b1220; box-shadow: 0 10px 30px rgba(0,0,0,.35) }
   .tab { background:#0f172a; border-color:#1f2937; color:#e5e7eb }
-  .tab.active { background: #064e3b; color: #ecfdf3 }
+  .tab.active { background: #1f2937; color: #e5e7eb; border-color:#334155 }
   .section-card { background:#0f172a; border-color:#1f2937 }
   .count { color: #ecfeff }
   .week { background:#0f172a; border-color:#1f2937 }
   .day { background:#111827; border-color:#1f2937 }
+  .week-strip.subtle .day.selected { background:#1f2937; border-color:#334155; box-shadow: none }
   .group-header { background:#0f172a }
   .group { border-color:#1f2937 }
   .config-item { background:#0f172a; border-color:#1f2937 }

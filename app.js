@@ -17,23 +17,25 @@ const WEEK_STARTS_ON_SUNDAY = false;
 const DEFAULT_CONFIG = {
   banner: "",
   items: [
-    { id: crypto.randomUUID(), type: "action", name: "Wake up on time", points: 5 },
+    { id: uuid(), type: "action", name: "Wake up on time", points: 5 },
     {
-      id: crypto.randomUUID(),
+      id: uuid(),
       type: "group",
       name: "Morning Routine",
       children: [
-        { id: crypto.randomUUID(), type: "action", name: "Drink water", points: 2 },
-        { id: crypto.randomUUID(), type: "action", name: "Meditate", points: 3 },
+        { id: uuid(), type: "action", name: "Drink water", points: 2 },
+        { id: uuid(), type: "action", name: "Meditate", points: 3 },
       ]
     },
-    { id: crypto.randomUUID(), type: "action", name: "Exercise", points: 4 }
+    { id: uuid(), type: "action", name: "Exercise", points: 4 }
   ]
 };
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getDatabase(app);
+
+const uuid = () => (crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2));
 
 const el = (id) => document.getElementById(id);
 const tabs = document.querySelectorAll('.tab');
@@ -337,15 +339,25 @@ function renderGroup(group) {
 function toggleAction(action) {
   const dayKey = ymd(pointsSelectedDay);
   const dayRef = ref(db, dbPath(`points/daily/${dayKey}`));
-  const delta = action.points || 0;
+  const currentActive = !!pointsDayData.actions?.[action.id];
+  const nextActive = !currentActive;
+  const nextActions = { ...(pointsDayData.actions || {}), [action.id]: nextActive };
+  const nextTotal = Object.entries(nextActions).reduce((sum, [id, active]) => {
+    if (!active) return sum;
+    const def = actionLookup.get(id);
+    return sum + (def?.points || 0);
+  }, 0);
+
+  pointsDayData = { total: nextTotal, actions: nextActions };
+  pointsDayTotalEl.textContent = nextTotal;
+  renderPointsList();
+  const weekCell = pointsWeekCells.get(dayKey);
+  if (weekCell) weekCell.textContent = nextTotal;
+
   runTransaction(dayRef, (cur) => {
     const data = cur || { total: 0, actions: {} };
-    if (!data.actions) data.actions = {};
-    const active = !!data.actions[action.id];
-    const next = !active;
-    data.actions[action.id] = next;
-    const total = (data.total || 0) + (next ? delta : -delta);
-    data.total = Math.max(0, total);
+    data.actions = { ...(data.actions || {}), [action.id]: nextActive };
+    data.total = nextTotal;
     return data;
   });
 }
@@ -370,14 +382,14 @@ function setupConfigModule() {
     if (!name) return;
     const pts = parseInt(prompt('Point value?') || '0', 10) || 0;
     const next = cloneConfig();
-    next.items.push({ id: crypto.randomUUID(), type: 'action', name, points: pts });
+    next.items.push({ id: uuid(), type: 'action', name, points: pts });
     persistConfig(next);
   });
   addGroupBtn.addEventListener('click', () => {
     const name = prompt('Group name?');
     if (!name) return;
     const next = cloneConfig();
-    next.items.push({ id: crypto.randomUUID(), type: 'group', name, children: [] });
+    next.items.push({ id: uuid(), type: 'group', name, children: [] });
     persistConfig(next);
   });
 }
@@ -407,12 +419,6 @@ function renderConfigList() {
 function renderConfigItem(item, index, list, onChange) {
   const wrap = document.createElement('div');
   wrap.className = 'config-item';
-  wrap.draggable = true;
-  wrap.addEventListener('dragstart', (e) => {
-    wrap.classList.add('dragging');
-    e.dataTransfer.setData('text/plain', index);
-  });
-  wrap.addEventListener('dragend', () => wrap.classList.remove('dragging'));
   wrap.addEventListener('dragover', (e) => e.preventDefault());
   wrap.addEventListener('drop', (e) => {
     e.preventDefault();
@@ -430,6 +436,12 @@ function renderConfigItem(item, index, list, onChange) {
   subtitle.textContent = item.type === 'group' ? 'Group' : `${item.points} points`;
   meta.appendChild(title); meta.appendChild(subtitle);
   const handle = document.createElement('div'); handle.className = 'handle'; handle.textContent = '↕';
+  handle.draggable = true;
+  handle.addEventListener('dragstart', (e) => {
+    wrap.classList.add('dragging');
+    e.dataTransfer.setData('text/plain', index);
+  });
+  handle.addEventListener('dragend', () => wrap.classList.remove('dragging'));
   row.appendChild(meta); row.appendChild(handle);
   wrap.appendChild(row);
 
@@ -439,7 +451,8 @@ function renderConfigItem(item, index, list, onChange) {
   const dupBtn = document.createElement('button'); dupBtn.className = 'btn'; dupBtn.textContent = 'Duplicate';
   actions.appendChild(editBtn); actions.appendChild(delBtn); actions.appendChild(dupBtn);
 
-  editBtn.onclick = () => {
+  editBtn.onclick = (e) => {
+    e.stopPropagation();
     if (item.type === 'group') {
       const name = prompt('Group name?', item.name);
       if (!name) return;
@@ -457,23 +470,25 @@ function renderConfigItem(item, index, list, onChange) {
     }
   };
 
-  delBtn.onclick = () => {
+  delBtn.onclick = (e) => {
+    e.stopPropagation();
     if (!confirm('Delete this item?')) return;
     const next = cloneConfig();
     next.items.splice(index, 1);
     persistConfig(next);
   };
 
-  dupBtn.onclick = () => {
+  dupBtn.onclick = (e) => {
+    e.stopPropagation();
     const next = cloneConfig();
     const clone = structuredClone(item);
     const insertAt = index + 1;
     if (clone.type === 'group') {
-      clone.id = crypto.randomUUID();
+      clone.id = uuid();
       clone.name = `${clone.name} (Copy)`;
-      clone.children = (clone.children || []).map((c) => ({ ...c, id: crypto.randomUUID(), name: `${c.name}` }));
+      clone.children = (clone.children || []).map((c) => ({ ...c, id: uuid(), name: `${c.name}` }));
     } else {
-      clone.id = crypto.randomUUID();
+      clone.id = uuid();
       clone.name = `${clone.name} (Copy)`;
     }
     next.items.splice(insertAt, 0, clone);
@@ -484,13 +499,14 @@ function renderConfigItem(item, index, list, onChange) {
 
   if (item.type === 'group') {
     const addActionBtn = document.createElement('button'); addActionBtn.className = 'btn primary'; addActionBtn.textContent = '+ Action';
-    addActionBtn.onclick = () => {
+    addActionBtn.onclick = (e) => {
+      e.stopPropagation();
       const name = prompt('Action name?'); if (!name) return;
       const pts = parseInt(prompt('Point value?') || '0', 10) || 0;
       const next = cloneConfig();
       const target = next.items[index];
       target.children = target.children || [];
-      target.children.push({ id: crypto.randomUUID(), type: 'action', name, points: pts });
+      target.children.push({ id: uuid(), type: 'action', name, points: pts });
       persistConfig(next);
     };
     wrap.appendChild(addActionBtn);
@@ -511,9 +527,7 @@ function renderConfigItem(item, index, list, onChange) {
 }
 
 function renderChild(child, index, group, onChange) {
-  const wrap = document.createElement('div'); wrap.className = 'child'; wrap.draggable = true;
-  wrap.addEventListener('dragstart', (e) => { wrap.classList.add('dragging'); e.dataTransfer.setData('text/plain', index); });
-  wrap.addEventListener('dragend', () => wrap.classList.remove('dragging'));
+  const wrap = document.createElement('div'); wrap.className = 'child';
   wrap.addEventListener('dragover', (e) => e.preventDefault());
   wrap.addEventListener('drop', (e) => {
     e.preventDefault();
@@ -530,6 +544,9 @@ function renderChild(child, index, group, onChange) {
   const subtitle = document.createElement('div'); subtitle.className = 'muted'; subtitle.textContent = `${child.points} points`;
   meta.appendChild(title); meta.appendChild(subtitle);
   const handle = document.createElement('div'); handle.className = 'handle'; handle.textContent = '↕';
+  handle.draggable = true;
+  handle.addEventListener('dragstart', (e) => { wrap.classList.add('dragging'); e.dataTransfer.setData('text/plain', index); });
+  handle.addEventListener('dragend', () => wrap.classList.remove('dragging'));
   row.appendChild(meta); row.appendChild(handle);
   wrap.appendChild(row);
 
@@ -540,22 +557,25 @@ function renderChild(child, index, group, onChange) {
   actions.appendChild(editBtn); actions.appendChild(delBtn); actions.appendChild(dupBtn);
   wrap.appendChild(actions);
 
-  editBtn.onclick = () => {
+  editBtn.onclick = (e) => {
+    e.stopPropagation();
     const name = prompt('Action name?', child.name); if (!name) return;
     const pts = parseInt(prompt('Point value?', child.points) || `${child.points}`, 10) || 0;
     const nextChildren = [...(group.children || [])];
     nextChildren[index] = { ...child, name, points: pts };
     onChange(nextChildren);
   };
-  delBtn.onclick = () => {
+  delBtn.onclick = (e) => {
+    e.stopPropagation();
     if (!confirm('Delete this action?')) return;
     const nextChildren = [...(group.children || [])];
     nextChildren.splice(index, 1);
     onChange(nextChildren);
   };
-  dupBtn.onclick = () => {
+  dupBtn.onclick = (e) => {
+    e.stopPropagation();
     const nextChildren = [...(group.children || [])];
-    const copy = { ...child, id: crypto.randomUUID(), name: `${child.name} (Copy)` };
+    const copy = { ...child, id: uuid(), name: `${child.name} (Copy)` };
     nextChildren.splice(index + 1, 0, copy);
     onChange(nextChildren);
   };
