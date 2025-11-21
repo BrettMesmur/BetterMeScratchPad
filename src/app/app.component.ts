@@ -106,6 +106,7 @@ export class AppComponent implements OnInit, OnDestroy {
   private readonly app = initializeApp(firebaseConfig);
   private readonly auth = getAuth(this.app);
   private readonly db = getDatabase(this.app);
+  private readonly localConfigKey = 'betterme_points_config';
   private todayRef?: DatabaseReference;
   private todayUnsubscribe?: Unsubscribe;
   private pointsDayRef?: DatabaseReference;
@@ -180,6 +181,8 @@ export class AppComponent implements OnInit, OnDestroy {
     const dayKey = ymd(this.selectedPointsDay);
     const refPath = ref(this.db, `users/${this.uid}/points/days/${dayKey}`);
     const isActive = !!this.pointsDayStates[action.id];
+    const prevStates = this.pointsDayStates;
+    const prevTotal = this.pointsDayTotal;
 
     // Optimistic UI update
     const nextStates = { ...this.pointsDayStates } as Record<string, boolean>;
@@ -193,20 +196,34 @@ export class AppComponent implements OnInit, OnDestroy {
     this.pointsDayTotal = nextTotal;
     this.pointsWeekDays = this.pointsWeekDays.map((day) => day.key === dayKey ? { ...day, count: nextTotal } : day);
 
-    await runTransaction(refPath, (cur): PointsDayData => {
-      const base: PointsDayData = cur && typeof cur === 'object'
-        ? { total: Number(cur.total) || 0, actions: cur.actions || {} }
-        : { total: 0, actions: {} };
-      const active = !!base.actions[action.id];
-      if (active) {
-        base.total = Math.max(0, base.total - action.points);
-        delete base.actions[action.id];
-      } else {
-        base.total += action.points;
-        base.actions[action.id] = true;
+    try {
+      const result = await runTransaction(refPath, (cur): PointsDayData => {
+        const base: PointsDayData = cur && typeof cur === 'object'
+          ? { total: Number(cur.total) || 0, actions: cur.actions || {} }
+          : { total: 0, actions: {} };
+        const active = !!base.actions[action.id];
+        if (active) {
+          base.total = Math.max(0, base.total - action.points);
+          delete base.actions[action.id];
+        } else {
+          base.total += action.points;
+          base.actions[action.id] = true;
+        }
+        return base;
+      });
+
+      if (result.committed && result.snapshot?.exists()) {
+        const val = result.snapshot.val() as PointsDayData;
+        this.pointsDayTotal = Number(val.total) || 0;
+        this.pointsDayStates = val.actions || {};
+        this.pointsWeekDays = this.pointsWeekDays.map((day) => day.key === dayKey ? { ...day, count: this.pointsDayTotal } : day);
       }
-      return base;
-    });
+    } catch (e) {
+      console.error('Toggle failed', e);
+      this.pointsDayStates = prevStates;
+      this.pointsDayTotal = prevTotal;
+      this.pointsWeekDays = this.pointsWeekDays.map((day) => day.key === dayKey ? { ...day, count: prevTotal } : day);
+    }
   }
 
   prevWeek(): void {
@@ -444,38 +461,63 @@ export class AppComponent implements OnInit, OnDestroy {
   }
 
   private async loadPointsConfig(): Promise<void> {
-    if (!this.uid) return;
-    const configRef = ref(this.db, `users/${this.uid}/points/config`);
-    const snap = await get(configRef);
-    if (snap.exists()) {
-      const val = snap.val();
-      const rawItems: PointRootItem[] = Array.isArray(val?.items) ? val.items : [];
-      this.pointItems = rawItems.map((item) => item.type === 'group'
-        ? { id: item.id || this.generateId(), type: 'group', name: item.name || 'Group', children: (item as PointGroupItem).children?.map((c) => this.createAction(c.name, c.points)) || [] }
-        : { id: item.id || this.generateId(), type: 'action', name: item.name || 'Action', points: Number((item as PointActionItem).points) || 0 });
-      this.bannerText = val?.banner || '';
-    } else {
-      this.pointItems = [
-        this.createAction('Wake up on time', 5),
-        {
-          id: this.generateId(),
-          type: 'group',
-          name: 'Healthy choices',
-          children: [
-            this.createAction('Drink water', 3),
-            this.createAction('Take a walk', 4)
-          ]
-        },
-        this.createAction('Reflect on the day', 2)
-      ];
+    let loadedFromServer = false;
+
+    if (this.uid) {
+      try {
+        const configRef = ref(this.db, `users/${this.uid}/points/config`);
+        const snap = await get(configRef);
+        if (snap.exists()) {
+          const val = snap.val();
+          const rawItems: PointRootItem[] = Array.isArray(val?.items) ? val.items : [];
+          this.pointItems = rawItems.map((item) => item.type === 'group'
+            ? { id: item.id || this.generateId(), type: 'group', name: item.name || 'Group', children: (item as PointGroupItem).children?.map((c) => this.createAction(c.name, c.points)) || [] }
+            : { id: item.id || this.generateId(), type: 'action', name: item.name || 'Action', points: Number((item as PointActionItem).points) || 0 });
+          this.bannerText = val?.banner || '';
+          loadedFromServer = true;
+          this.persistLocalConfig();
+        }
+      } catch (e) {
+        console.error('Failed to load config from Firebase', e);
+        this.status = 'Using local settings due to sync error.';
+      }
+    }
+
+    if (!loadedFromServer) {
+      const local = this.loadLocalConfig();
+      if (local) {
+        this.pointItems = local.items;
+        this.bannerText = local.banner;
+      } else {
+        this.pointItems = [
+          this.createAction('Wake up on time', 5),
+          {
+            id: this.generateId(),
+            type: 'group',
+            name: 'Healthy choices',
+            children: [
+              this.createAction('Drink water', 3),
+              this.createAction('Take a walk', 4)
+            ]
+          },
+          this.createAction('Reflect on the day', 2)
+        ];
+      }
+
       await this.persistPointsConfig();
     }
   }
 
   private async persistPointsConfig(): Promise<void> {
+    this.persistLocalConfig();
     if (!this.uid) return;
     const configRef = ref(this.db, `users/${this.uid}/points/config`);
-    await set(configRef, { items: this.pointItems, banner: this.bannerText });
+    try {
+      await set(configRef, { items: this.pointItems, banner: this.bannerText });
+    } catch (e) {
+      console.error('Persist failed', e);
+      this.status = 'Unable to sync to cloud; your changes are saved locally.';
+    }
   }
 
   private updateRangeLabel(): void {
@@ -492,5 +534,30 @@ export class AppComponent implements OnInit, OnDestroy {
 
   private generateId(): string {
     return Math.random().toString(36).slice(2, 10);
+  }
+
+  private persistLocalConfig(): void {
+    if (typeof localStorage === 'undefined') return;
+    const payload = JSON.stringify({ items: this.pointItems, banner: this.bannerText });
+    localStorage.setItem(this.localConfigKey, payload);
+  }
+
+  private loadLocalConfig(): { items: PointRootItem[]; banner: string } | null {
+    if (typeof localStorage === 'undefined') return null;
+    const raw = localStorage.getItem(this.localConfigKey);
+    if (!raw) return null;
+    try {
+      const parsed = JSON.parse(raw);
+      const rawItems: PointRootItem[] = Array.isArray(parsed?.items) ? parsed.items : [];
+      return {
+        items: rawItems.map((item) => item.type === 'group'
+          ? { id: item.id || this.generateId(), type: 'group', name: item.name || 'Group', children: (item as PointGroupItem).children?.map((c) => this.createAction(c.name, c.points)) || [] }
+          : { id: item.id || this.generateId(), type: 'action', name: item.name || 'Action', points: Number((item as PointActionItem).points) || 0 }),
+        banner: parsed?.banner || ''
+      };
+    } catch (e) {
+      console.error('Failed to read local config', e);
+      return null;
+    }
   }
 }
