@@ -13,6 +13,10 @@ An Angular rework of the daily tap counter that records anonymous tallies to Fir
    ```
    The app is served at [http://localhost:4200](http://localhost:4200).
 
+### Windows setup help
+
+If `@angular/cdk/drag-drop` or other Angular packages are reported as missing on Windows, run the included `windows-setup.bat` from an **Administrator** PowerShell or Command Prompt. The script restores dependencies and then launches `npm start`, which resolves the missing drag-and-drop module errors that occur when packages have not been installed.
+
 ## Testing
 Run unit tests with Karma and Jasmine:
 ```bash
