@@ -179,6 +179,20 @@ export class AppComponent implements OnInit, OnDestroy {
     if (!this.uid) return;
     const dayKey = ymd(this.selectedPointsDay);
     const refPath = ref(this.db, `users/${this.uid}/points/days/${dayKey}`);
+    const isActive = !!this.pointsDayStates[action.id];
+
+    // Optimistic UI update
+    const nextStates = { ...this.pointsDayStates } as Record<string, boolean>;
+    if (isActive) {
+      delete nextStates[action.id];
+    } else {
+      nextStates[action.id] = true;
+    }
+    const nextTotal = Math.max(0, this.pointsDayTotal + (isActive ? -action.points : action.points));
+    this.pointsDayStates = nextStates;
+    this.pointsDayTotal = nextTotal;
+    this.pointsWeekDays = this.pointsWeekDays.map((day) => day.key === dayKey ? { ...day, count: nextTotal } : day);
+
     await runTransaction(refPath, (cur): PointsDayData => {
       const base: PointsDayData = cur && typeof cur === 'object'
         ? { total: Number(cur.total) || 0, actions: cur.actions || {} }

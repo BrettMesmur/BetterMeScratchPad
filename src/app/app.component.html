@@ -55,10 +55,10 @@
       <div *ngIf="pointItems.length === 0" class="empty muted">No actions configured. Add items in Configuration.</div>
     </div>
 
-    <section class="week">
+    <section class="week points-week">
       <div class="week-label">This Week</div>
       <div class="range-label">{{ pointsRangeLabel }}</div>
-      <div class="week-strip">
+      <div class="week-strip points-week-strip">
         <div
           class="day"
           *ngFor="let day of pointsWeekDays"
