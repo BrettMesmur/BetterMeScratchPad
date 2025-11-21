@@ -180,46 +180,36 @@ export class AppComponent implements OnInit, OnDestroy {
     if (!this.uid) return;
     const dayKey = ymd(this.selectedPointsDay);
     const refPath = ref(this.db, `users/${this.uid}/points/days/${dayKey}`);
-    const isActive = !!this.pointsDayStates[action.id];
     const prevStates = this.pointsDayStates;
     const prevTotal = this.pointsDayTotal;
 
-    // Optimistic UI update
-    const nextStates = { ...this.pointsDayStates } as Record<string, boolean>;
-    if (isActive) {
-      delete nextStates[action.id];
-    } else {
-      nextStates[action.id] = true;
-    }
-    const nextTotal = Math.max(0, this.pointsDayTotal + (isActive ? -action.points : action.points));
-    this.pointsDayStates = nextStates;
-    this.pointsDayTotal = nextTotal;
-    this.pointsWeekDays = this.pointsWeekDays.map((day) => day.key === dayKey ? { ...day, count: nextTotal } : day);
-
     try {
-      const result = await runTransaction(refPath, (cur): PointsDayData => {
-        const base: PointsDayData = cur && typeof cur === 'object'
-          ? { total: Number(cur.total) || 0, actions: cur.actions || {} }
-          : { total: 0, actions: {} };
-        const active = !!base.actions[action.id];
-        if (active) {
-          base.total = Math.max(0, base.total - action.points);
-          delete base.actions[action.id];
-        } else {
-          base.total += action.points;
-          base.actions[action.id] = true;
-        }
-        return base;
-      });
+      const snap = await get(refPath);
+      const rawVal = snap.exists() ? snap.val() : null;
+      const current: PointsDayData = rawVal && typeof rawVal === 'object'
+        ? { total: Number(rawVal.total) || 0, actions: rawVal.actions || {} }
+        : { total: Number(rawVal) || 0, actions: {} };
 
-      if (result.committed && result.snapshot?.exists()) {
-        const val = result.snapshot.val() as PointsDayData;
-        this.pointsDayTotal = Number(val.total) || 0;
-        this.pointsDayStates = val.actions || {};
-        this.pointsWeekDays = this.pointsWeekDays.map((day) => day.key === dayKey ? { ...day, count: this.pointsDayTotal } : day);
+      const nextActions = { ...current.actions } as Record<string, boolean>;
+      let nextTotal = current.total;
+      const isActive = !!current.actions[action.id];
+
+      if (isActive) {
+        nextTotal = Math.max(0, nextTotal - action.points);
+        delete nextActions[action.id];
+      } else {
+        nextTotal += action.points;
+        nextActions[action.id] = true;
       }
+
+      await set(refPath, { total: nextTotal, actions: nextActions });
+
+      this.pointsDayStates = nextActions;
+      this.pointsDayTotal = nextTotal;
+      this.pointsWeekDays = this.pointsWeekDays.map((day) => day.key === dayKey ? { ...day, count: nextTotal } : day);
     } catch (e) {
       console.error('Toggle failed', e);
+      this.status = 'Unable to update points right now. Please try again.';
       this.pointsDayStates = prevStates;
       this.pointsDayTotal = prevTotal;
       this.pointsWeekDays = this.pointsWeekDays.map((day) => day.key === dayKey ? { ...day, count: prevTotal } : day);
