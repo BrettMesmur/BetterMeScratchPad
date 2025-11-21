@@ -180,6 +180,8 @@ export class AppComponent implements OnInit, OnDestroy {
     const dayKey = ymd(this.selectedPointsDay);
     const refPath = ref(this.db, `users/${this.uid}/points/days/${dayKey}`);
     const isActive = !!this.pointsDayStates[action.id];
+    const prevStates = this.pointsDayStates;
+    const prevTotal = this.pointsDayTotal;
 
     // Optimistic UI update
     const nextStates = { ...this.pointsDayStates } as Record<string, boolean>;
@@ -193,20 +195,34 @@ export class AppComponent implements OnInit, OnDestroy {
     this.pointsDayTotal = nextTotal;
     this.pointsWeekDays = this.pointsWeekDays.map((day) => day.key === dayKey ? { ...day, count: nextTotal } : day);
 
-    await runTransaction(refPath, (cur): PointsDayData => {
-      const base: PointsDayData = cur && typeof cur === 'object'
-        ? { total: Number(cur.total) || 0, actions: cur.actions || {} }
-        : { total: 0, actions: {} };
-      const active = !!base.actions[action.id];
-      if (active) {
-        base.total = Math.max(0, base.total - action.points);
-        delete base.actions[action.id];
-      } else {
-        base.total += action.points;
-        base.actions[action.id] = true;
+    try {
+      const result = await runTransaction(refPath, (cur): PointsDayData => {
+        const base: PointsDayData = cur && typeof cur === 'object'
+          ? { total: Number(cur.total) || 0, actions: cur.actions || {} }
+          : { total: 0, actions: {} };
+        const active = !!base.actions[action.id];
+        if (active) {
+          base.total = Math.max(0, base.total - action.points);
+          delete base.actions[action.id];
+        } else {
+          base.total += action.points;
+          base.actions[action.id] = true;
+        }
+        return base;
+      });
+
+      if (result.committed && result.snapshot?.exists()) {
+        const val = result.snapshot.val() as PointsDayData;
+        this.pointsDayTotal = Number(val.total) || 0;
+        this.pointsDayStates = val.actions || {};
+        this.pointsWeekDays = this.pointsWeekDays.map((day) => day.key === dayKey ? { ...day, count: this.pointsDayTotal } : day);
       }
-      return base;
-    });
+    } catch (e) {
+      console.error('Toggle failed', e);
+      this.pointsDayStates = prevStates;
+      this.pointsDayTotal = prevTotal;
+      this.pointsWeekDays = this.pointsWeekDays.map((day) => day.key === dayKey ? { ...day, count: prevTotal } : day);
+    }
   }
 
   prevWeek(): void {
