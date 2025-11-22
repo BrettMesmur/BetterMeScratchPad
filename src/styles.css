@@ -81,7 +81,7 @@ body {
 .status { color: var(--muted); font-size: 13px; text-align: center; margin-top: 2px }
 
 .section-head { text-align: center; display: grid; gap: 6px; }
-.count-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; align-items: stretch; }
+.count-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; align-items: stretch; }
 .count-card {
   border: 1px solid #e2e8f0;
   border-radius: 12px;
@@ -203,6 +203,7 @@ label span { display: block; color: var(--muted); font-size: 13px; margin-bottom
     .action-row { background:#0f172a; border-color:#1f2937; }
     .action-row.active { background: var(--accent); border-color: var(--accent); color: white; }
     .action-row.active .meta { color: rgba(255,255,255,.85); }
+    .count-card { background:#0f172a; border-color:#1f2937; }
     .banner { background:#1e3a8a; color:#bfdbfe; border-color:#1d4ed8; }
     .tab.active { background:#111827; border-color:#1f2937; color:#e5e7eb; }
     .card { background: #0f172a; border-color:#1f2937; }
