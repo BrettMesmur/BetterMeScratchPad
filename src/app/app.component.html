@@ -213,15 +213,17 @@
     </section>
   </div>
 
-  <nav class="tabs bottom-nav" role="tablist" aria-label="Main navigation">
-    <button
-      *ngFor="let tab of tabs"
-      class="tab"
-      role="tab"
-      [attr.aria-selected]="selectedTab === tab.key"
-      [class.active]="selectedTab === tab.key"
-      (click)="selectedTab = tab.key">
-      {{ tab.label }}
-    </button>
-  </nav>
+  <footer class="footer" aria-label="Main navigation">
+    <nav class="tabs footer-nav" role="tablist">
+      <button
+        *ngFor="let tab of tabs"
+        class="tab"
+        role="tab"
+        [attr.aria-selected]="selectedTab === tab.key"
+        [class.active]="selectedTab === tab.key"
+        (click)="selectedTab = tab.key">
+        {{ tab.label }}
+      </button>
+    </nav>
+  </footer>
 </main>
