@@ -98,6 +98,8 @@ export class AppComponent implements OnInit, OnDestroy {
   pointsWeekDays: WeekDay[] = [];
   pointsRangeLabel = '';
   toggleLocks: Record<string, boolean> = {};
+  editingItems: Record<string, boolean> = {};
+  movementEnabled = false;
 
   readonly ymd = ymd;
 
@@ -358,6 +360,19 @@ export class AppComponent implements OnInit, OnDestroy {
   updateGroupName(group: PointGroupItem, value: string): void {
     group.name = value;
     void this.persistPointsConfig();
+  }
+
+  toggleEdit(item: PointRootItem | PointActionItem): void {
+    const next = !this.editingItems[item.id];
+    this.editingItems = { ...this.editingItems, [item.id]: next };
+  }
+
+  isEditing(item: PointRootItem | PointActionItem): boolean {
+    return !!this.editingItems[item.id];
+  }
+
+  toggleMovement(): void {
+    this.movementEnabled = !this.movementEnabled;
   }
 
   async persistBanner(): Promise<void> {
