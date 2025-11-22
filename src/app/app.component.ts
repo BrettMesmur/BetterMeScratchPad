@@ -383,6 +383,15 @@ export class AppComponent implements OnInit, OnDestroy {
     return { id: this.generateId(), type: 'action', name, points };
   }
 
+  private normalizeAction(raw: Partial<PointActionItem> | undefined): PointActionItem {
+    return {
+      id: raw?.id || this.generateId(),
+      type: 'action',
+      name: raw?.name || 'Action',
+      points: Number(raw?.points) || 0
+    };
+  }
+
   private insertAt<T>(arr: T[], index: number, item: T): T[] {
     const copy = [...arr];
     copy.splice(index, 0, item);
@@ -495,8 +504,8 @@ export class AppComponent implements OnInit, OnDestroy {
           const val = snap.val();
           const rawItems: PointRootItem[] = Array.isArray(val?.items) ? val.items : [];
           this.pointItems = rawItems.map((item) => item.type === 'group'
-            ? { id: item.id || this.generateId(), type: 'group', name: item.name || 'Group', children: (item as PointGroupItem).children?.map((c) => this.createAction(c.name, c.points)) || [] }
-            : { id: item.id || this.generateId(), type: 'action', name: item.name || 'Action', points: Number((item as PointActionItem).points) || 0 });
+            ? { id: item.id || this.generateId(), type: 'group', name: item.name || 'Group', children: (item as PointGroupItem).children?.map((c) => this.normalizeAction(c)) || [] }
+            : this.normalizeAction(item as PointActionItem));
           this.bannerText = val?.banner || '';
           loadedFromServer = true;
           this.persistLocalConfig();
@@ -612,8 +621,8 @@ export class AppComponent implements OnInit, OnDestroy {
       const rawItems: PointRootItem[] = Array.isArray(parsed?.items) ? parsed.items : [];
       return {
         items: rawItems.map((item) => item.type === 'group'
-          ? { id: item.id || this.generateId(), type: 'group', name: item.name || 'Group', children: (item as PointGroupItem).children?.map((c) => this.createAction(c.name, c.points)) || [] }
-          : { id: item.id || this.generateId(), type: 'action', name: item.name || 'Action', points: Number((item as PointActionItem).points) || 0 }),
+          ? { id: item.id || this.generateId(), type: 'group', name: item.name || 'Group', children: (item as PointGroupItem).children?.map((c) => this.normalizeAction(c)) || [] }
+          : this.normalizeAction(item as PointActionItem)),
         banner: parsed?.banner || ''
       };
     } catch (e) {
