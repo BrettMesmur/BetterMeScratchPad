@@ -45,9 +45,9 @@ body {
 }
 .tab.active { color: var(--fg); background: #e2e8f0; }
 .banner {
-  background: #fee2e2;
-  color: #991b1b;
-  border: 1px solid #fecdd3;
+  background: #dbeafe;
+  color: #1d4ed8;
+  border: 1px solid #bfdbfe;
   padding: 10px 14px;
   border-radius: 12px;
   font-weight: 600;
@@ -189,6 +189,7 @@ label span { display: block; color: var(--muted); font-size: 13px; margin-bottom
     .action-row { background:#0f172a; border-color:#1f2937; }
     .action-row.active { background: var(--accent); border-color: var(--accent); color: white; }
     .action-row.active .meta { color: rgba(255,255,255,.85); }
+    .banner { background:#1e3a8a; color:#bfdbfe; border-color:#1d4ed8; }
     .tab.active { background:#111827; border-color:#1f2937; color:#e5e7eb; }
     .card { background: #0f172a; border-color:#1f2937; }
     textarea, input[type="text"], input[type="number"] { background:#0b1220; border-color:#1f2937; color:#e5e7eb; }
