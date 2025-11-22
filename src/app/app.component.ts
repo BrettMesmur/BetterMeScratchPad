@@ -375,10 +375,6 @@ export class AppComponent implements OnInit, OnDestroy {
     this.movementEnabled = !this.movementEnabled;
   }
 
-  enableMovement(): void {
-    this.movementEnabled = true;
-  }
-
   async persistBanner(): Promise<void> {
     await this.persistPointsConfig();
   }

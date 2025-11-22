@@ -140,7 +140,6 @@
               </div>
               <div class="summary-actions">
                 <button class="btn" (click)="toggleEdit(item)">{{ isEditing(item) ? 'Hide details' : 'Edit details' }}</button>
-                <button class="btn" (click)="enableMovement()">Move</button>
                 <button class="btn" (click)="duplicateAction(item, i)">Duplicate</button>
               </div>
               <div *ngIf="movementEnabled" cdkDragHandle class="drag-handle" aria-hidden="true">☰</div>
@@ -169,7 +168,6 @@
               </div>
               <div class="summary-actions">
                 <button class="btn" (click)="toggleEdit(item)">{{ isEditing(item) ? 'Hide details' : 'Edit details' }}</button>
-                <button class="btn" (click)="enableMovement()">Move</button>
                 <button class="btn" (click)="duplicateGroup(i)">Duplicate</button>
               </div>
               <div *ngIf="movementEnabled" cdkDragHandle class="drag-handle" aria-hidden="true">☰</div>
@@ -202,7 +200,6 @@
                     </div>
                     <div class="summary-actions">
                       <button class="btn" (click)="toggleEdit(child)">{{ isEditing(child) ? 'Hide details' : 'Edit details' }}</button>
-                      <button class="btn" (click)="enableMovement()">Move</button>
                       <button class="btn" (click)="duplicateAction(child, ci, item)">Duplicate</button>
                     </div>
                     <div *ngIf="movementEnabled" cdkDragHandle class="drag-handle" aria-hidden="true">☰</div>
