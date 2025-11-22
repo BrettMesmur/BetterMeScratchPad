@@ -119,15 +119,33 @@
         <div class="actions">
           <button class="btn" (click)="addRootAction()">+ Action</button>
           <button class="btn" (click)="addGroup()">+ Group</button>
+          <button class="btn" [class.toggled]="movementEnabled" (click)="toggleMovement()">
+            Movement {{ movementEnabled ? 'On' : 'Off' }}
+          </button>
         </div>
       </div>
 
-      <div cdkDropList (cdkDropListDropped)="dropRoot($event)" class="config-list">
-        <div *ngFor="let item of pointItems; let i = index" cdkDrag class="config-item">
-          <div cdkDragHandle class="drag-handle" aria-hidden="true">☰</div>
-          <div *ngIf="isAction(item)" class="config-body">
-            <div class="config-title">Standalone Action</div>
-            <div class="fields">
+      <div
+        cdkDropList
+        (cdkDropListDropped)="dropRoot($event)"
+        class="config-list"
+        [cdkDropListDisabled]="!movementEnabled">
+        <div *ngFor="let item of pointItems; let i = index" cdkDrag [cdkDragDisabled]="!movementEnabled" class="config-item">
+          <div *ngIf="isAction(item)" class="config-body" [class.editing]="isEditing(item)">
+            <div class="config-summary">
+              <div class="summary-text">
+                <div class="config-title">Standalone Action</div>
+                <div class="summary-name">{{ item.name }}</div>
+                <div class="summary-meta">{{ item.points }} points</div>
+              </div>
+              <div class="summary-actions">
+                <button class="btn" (click)="toggleEdit(item)">{{ isEditing(item) ? 'Hide details' : 'Edit details' }}</button>
+                <button class="btn" (click)="enableMovement()">Move</button>
+                <button class="btn" (click)="duplicateAction(item, i)">Duplicate</button>
+              </div>
+              <div *ngIf="movementEnabled" cdkDragHandle class="drag-handle" aria-hidden="true">☰</div>
+            </div>
+            <div *ngIf="isEditing(item)" class="fields">
               <label>
                 <span>Name</span>
                 <input type="text" [(ngModel)]="item.name" (ngModelChange)="updateActionName(item, $event)" />
@@ -137,42 +155,75 @@
                 <input type="number" [(ngModel)]="item.points" (ngModelChange)="updateActionPoints(item, $event)" />
               </label>
             </div>
-            <div class="row-actions">
-              <button class="btn" (click)="duplicateAction(item, i)">Duplicate</button>
+            <div *ngIf="isEditing(item)" class="row-actions">
               <button class="btn danger" (click)="removeRootAction(i)">Delete</button>
             </div>
           </div>
 
-          <div *ngIf="isGroup(item)" class="config-body">
-            <div class="config-title">Group</div>
-            <label class="wide">
-              <span>Group name</span>
-              <input type="text" [(ngModel)]="item.name" (ngModelChange)="updateGroupName(item, $event)" />
-            </label>
-            <div class="row-actions">
-              <button class="btn" (click)="duplicateGroup(i)">Duplicate group</button>
-              <button class="btn danger" (click)="removeGroup(i)">Delete group</button>
+          <div *ngIf="isGroup(item)" class="config-body" [class.editing]="isEditing(item)">
+            <div class="config-summary">
+              <div class="summary-text">
+                <div class="config-title">Group</div>
+                <div class="summary-name">{{ item.name }}</div>
+                <div class="summary-meta">{{ item.children.length }} actions</div>
+              </div>
+              <div class="summary-actions">
+                <button class="btn" (click)="toggleEdit(item)">{{ isEditing(item) ? 'Hide details' : 'Edit details' }}</button>
+                <button class="btn" (click)="enableMovement()">Move</button>
+                <button class="btn" (click)="duplicateGroup(i)">Duplicate</button>
+              </div>
+              <div *ngIf="movementEnabled" cdkDragHandle class="drag-handle" aria-hidden="true">☰</div>
             </div>
-            <div class="child-list" cdkDropList [cdkDropListData]="item.children" (cdkDropListDropped)="dropChild(item, $event)">
-              <div *ngFor="let child of item.children; let ci = index" cdkDrag class="config-child">
-                <div cdkDragHandle class="drag-handle" aria-hidden="true">☰</div>
-                <div class="fields">
-                  <label>
-                    <span>Name</span>
-                    <input type="text" [(ngModel)]="child.name" (ngModelChange)="updateActionName(child, $event)" />
-                  </label>
-                  <label>
-                    <span>Points</span>
-                    <input type="number" [(ngModel)]="child.points" (ngModelChange)="updateActionPoints(child, $event)" />
-                  </label>
-                </div>
-                <div class="row-actions">
-                  <button class="btn" (click)="duplicateAction(child, ci, item)">Duplicate</button>
-                  <button class="btn danger" (click)="removeChildAction(item, ci)">Delete</button>
+
+            <div *ngIf="isEditing(item)">
+              <label class="wide">
+                <span>Group name</span>
+                <input type="text" [(ngModel)]="item.name" (ngModelChange)="updateGroupName(item, $event)" />
+              </label>
+              <div class="row-actions">
+                <button class="btn danger" (click)="removeGroup(i)">Delete group</button>
+              </div>
+              <div
+                class="child-list"
+                cdkDropList
+                [cdkDropListData]="item.children"
+                (cdkDropListDropped)="dropChild(item, $event)"
+                [cdkDropListDisabled]="!movementEnabled">
+                <div
+                  *ngFor="let child of item.children; let ci = index"
+                  cdkDrag
+                  [cdkDragDisabled]="!movementEnabled"
+                  class="config-child"
+                  [class.editing]="isEditing(child)">
+                  <div class="config-summary">
+                    <div class="summary-text">
+                      <div class="summary-name">{{ child.name }}</div>
+                      <div class="summary-meta">{{ child.points }} points</div>
+                    </div>
+                    <div class="summary-actions">
+                      <button class="btn" (click)="toggleEdit(child)">{{ isEditing(child) ? 'Hide details' : 'Edit details' }}</button>
+                      <button class="btn" (click)="enableMovement()">Move</button>
+                      <button class="btn" (click)="duplicateAction(child, ci, item)">Duplicate</button>
+                    </div>
+                    <div *ngIf="movementEnabled" cdkDragHandle class="drag-handle" aria-hidden="true">☰</div>
+                  </div>
+                  <div *ngIf="isEditing(child)" class="fields">
+                    <label>
+                      <span>Name</span>
+                      <input type="text" [(ngModel)]="child.name" (ngModelChange)="updateActionName(child, $event)" />
+                    </label>
+                    <label>
+                      <span>Points</span>
+                      <input type="number" [(ngModel)]="child.points" (ngModelChange)="updateActionPoints(child, $event)" />
+                    </label>
+                  </div>
+                  <div *ngIf="isEditing(child)" class="row-actions">
+                    <button class="btn danger" (click)="removeChildAction(item, ci)">Delete</button>
+                  </div>
                 </div>
               </div>
+              <button class="btn" (click)="addChildAction(item)">+ Add action</button>
             </div>
-            <button class="btn" (click)="addChildAction(item)">+ Add action</button>
           </div>
         </div>
       </div>

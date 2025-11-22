@@ -47,6 +47,7 @@ header { text-align: center; margin-bottom: 12px; }
 }
 .btn.primary { background: var(--accent); color: white; border-color: var(--accent); box-shadow: 0 6px 16px var(--ring); }
 .btn.danger { color: #991b1b; border-color: #fecdd3; background: #fff5f5; }
+.btn.toggled { background: #ecfdf3; border-color: var(--accent); color: var(--accent); box-shadow: 0 6px 14px var(--ring); }
 .btn:active { transform: translateY(1px) }
 .btn[disabled] { opacity:.6; cursor: not-allowed }
 
@@ -144,12 +145,24 @@ label span { display: block; color: var(--muted); font-size: 13px; margin-bottom
   gap: 10px;
   background: #fff;
 }
+.config-summary {
+  display: grid;
+  gap: 8px;
+  align-items: center;
+  grid-template-columns: 1fr auto;
+}
+.summary-text { display: grid; gap: 4px; }
+.summary-name { font-weight: 700; }
+.summary-meta { color: var(--muted); font-size: 13px; }
+.summary-actions { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
 .config-body { display: grid; gap: 10px; }
+.config-body.editing { border-top: 1px dashed #e2e8f0; padding-top: 10px; margin-top: 2px; }
 .config-title { font-weight: 800; color: var(--accent); }
 .row-actions { display: flex; gap: 8px; flex-wrap: wrap; }
 .drag-handle { cursor: grab; color: var(--muted); }
 .child-list { display: grid; gap: 8px; }
 .config-child { border: 1px dashed #e2e8f0; border-radius: 10px; padding: 10px; display: grid; gap: 8px; }
+.config-child.editing { border-style: solid; }
 .wide { width: 100%; }
 
   @media (prefers-color-scheme: dark) {
