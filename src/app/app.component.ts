@@ -108,6 +108,7 @@ export class AppComponent implements OnInit, OnDestroy {
   private readonly auth = getAuth(this.app);
   private readonly db = getDatabase(this.app);
   private readonly localConfigKey = 'betterme_points_config';
+  private readonly permissionDeniedCodes = ['PERMISSION_DENIED', 'permission_denied'];
   private todayRef?: DatabaseReference;
   private todayUnsubscribe?: Unsubscribe;
   private pointsDayRef?: DatabaseReference;
@@ -178,7 +179,7 @@ export class AppComponent implements OnInit, OnDestroy {
   }
 
   async toggleAction(action: PointActionItem): Promise<void> {
-    if (!this.uid) return;
+    if (!(await this.ensureAuthenticated())) return;
     const dayKey = ymd(this.selectedPointsDay);
     const refPath = ref(this.db, `users/${this.uid}/points/days/${dayKey}`);
     const prevStates = { ...this.pointsDayStates };
@@ -188,7 +189,7 @@ export class AppComponent implements OnInit, OnDestroy {
     this.toggleLocks = { ...this.toggleLocks, [action.id]: true };
 
     try {
-      const txn = await runTransaction(refPath, (cur) => {
+      const txn = await this.runWithReauth(() => runTransaction(refPath, (cur) => {
         const current: PointsDayData = cur && typeof cur === 'object'
           ? { total: Number(cur.total) || 0, actions: cur.actions || {} }
           : { total: Number(cur) || 0, actions: {} };
@@ -206,7 +207,7 @@ export class AppComponent implements OnInit, OnDestroy {
         }
 
         return { total: nextTotal, actions: nextActions } as PointsDayData;
-      }, { applyLocally: false });
+      }, { applyLocally: false }));
 
       if (!txn.committed || !txn.snapshot.exists()) {
         throw new Error('Points update was not committed');
@@ -221,7 +222,10 @@ export class AppComponent implements OnInit, OnDestroy {
       this.pointsWeekDays = this.pointsWeekDays.map((day) => day.key === dayKey ? { ...day, count: this.pointsDayTotal } : day);
     } catch (e) {
       console.error('Toggle failed', e);
-      this.status = 'Unable to update points right now. Please try again.';
+      const msg = this.isPermissionDenied(e)
+        ? 'Permission denied saving your points. Please reload to re-authenticate.'
+        : 'Unable to update points right now. Please try again.';
+      this.status = msg;
       this.pointsDayStates = prevStates;
       this.pointsDayTotal = prevTotal;
       this.pointsWeekDays = this.pointsWeekDays.map((day) => day.key === dayKey ? { ...day, count: prevTotal } : day);
@@ -545,6 +549,43 @@ export class AppComponent implements OnInit, OnDestroy {
     if (typeof localStorage === 'undefined') return;
     const payload = JSON.stringify({ items: this.pointItems, banner: this.bannerText });
     localStorage.setItem(this.localConfigKey, payload);
+  }
+
+  private async ensureAuthenticated(): Promise<boolean> {
+    if (this.uid) return true;
+    try {
+      const cred = await signInAnonymously(this.auth);
+      this.uid = cred.user?.uid || this.uid;
+      return !!this.uid;
+    } catch (e) {
+      console.error('Auth failed', e);
+      this.status = 'Unable to authenticate. Please reload the page.';
+      return false;
+    }
+  }
+
+  private isPermissionDenied(e: unknown): boolean {
+    const code = (e as { code?: string })?.code || '';
+    const message = (e as { message?: string })?.message || '';
+    return this.permissionDeniedCodes.some((needle) => code.includes(needle) || message.includes(needle));
+  }
+
+  private async runWithReauth<T>(fn: () => Promise<T>): Promise<T> {
+    try {
+      return await fn();
+    } catch (e) {
+      if (!this.isPermissionDenied(e)) throw e;
+
+      try {
+        await signInAnonymously(this.auth);
+        this.uid = this.auth.currentUser?.uid || this.uid;
+      } catch (reauthError) {
+        console.error('Re-auth failed', reauthError);
+        throw e;
+      }
+
+      return await fn();
+    }
   }
 
   private loadLocalConfig(): { items: PointRootItem[]; banner: string } | null {
