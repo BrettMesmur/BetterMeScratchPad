@@ -1,229 +1,227 @@
 <main class="app">
-  <header class="app-header">
-    <div class="title">Daily Progress</div>
-    <div class="tabs" role="tablist" aria-label="Main navigation">
-      <button
-        *ngFor="let tab of tabs"
-        class="tab"
-        role="tab"
-        [attr.aria-selected]="selectedTab === tab.key"
-        [class.active]="selectedTab === tab.key"
-        (click)="selectedTab = tab.key">
-        {{ tab.label }}
-      </button>
-    </div>
-  </header>
+  <div class="content">
+    <div *ngIf="bannerText" class="banner">{{ bannerText }}</div>
 
-  <div *ngIf="bannerText" class="banner">{{ bannerText }}</div>
-
-  <section *ngIf="selectedTab === 'points'" class="panel">
-    <div class="section-head">
-      <div class="week-label">Points for {{ selectedPointsDayLabel }}</div>
-      <div class="count">{{ pointsDayTotal }}</div>
-      <div class="status muted">Total points</div>
-    </div>
-
-    <div class="points-list">
-      <ng-container *ngFor="let item of pointItems">
-        <div
-          *ngIf="isAction(item)"
-          class="action-row"
-          [class.active]="pointsDayStates[item.id]"
-          (click)="toggleAction(item)">
-          <div class="text">
-            <div class="name">{{ item.name }}</div>
-            <div class="meta">{{ item.points }} points</div>
-          </div>
-        </div>
-
-        <div *ngIf="isGroup(item)" class="group-block">
-          <div class="group-title">{{ item.name }}</div>
-          <div class="group-actions">
-            <div
-              *ngFor="let action of item.children"
-              class="action-row"
-              [class.active]="pointsDayStates[action.id]"
-              (click)="toggleAction(action)">
-              <div class="text">
-                <div class="name">{{ action.name }}</div>
-                <div class="meta">{{ action.points }} points</div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </ng-container>
-      <div *ngIf="pointItems.length === 0" class="empty muted">No actions configured. Add items in Configuration.</div>
-    </div>
-
-    <section class="week points-week">
-      <div class="week-label">This Week</div>
-      <div class="range-label">{{ pointsRangeLabel }}</div>
-      <div class="week-strip points-week-strip">
-        <div
-          class="day"
-          *ngFor="let day of pointsWeekDays"
-          [class.selected]="day.key === ymd(selectedPointsDay)"
-          (click)="selectPointsDay(day.key)">
-          <div class="dow">{{ day.label }}</div>
-          <div class="mini">{{ day.count }}</div>
-        </div>
-      </div>
-    </section>
-
-    <div class="week-nav">
-      <button class="btn" aria-label="Previous week" (click)="prevPointsWeek()">‹</button>
-      <button class="btn" aria-label="Next week" (click)="nextPointsWeek()" [disabled]="!canGoNextPointsWeek">›</button>
-    </div>
-  </section>
-
-  <section *ngIf="selectedTab === 'times'" class="panel">
-    <section class="today">
-      <div class="week-label">{{ todayLabel }}</div>
-      <div class="count">{{ todayCount }}</div>
-      <button class="tap" (click)="tap()" [disabled]="tapBusy || !uid">+1</button>
-      <div class="status">{{ status || ' ' }}</div>
-    </section>
-
-    <section class="week">
-      <div class="week-label" aria-hidden="true"></div>
-      <div class="range-label">{{ rangeLabel }}</div>
-      <div class="week-strip">
-        <div class="day" *ngFor="let day of weekDays">
-          <div class="dow">{{ day.label }}</div>
-          <div class="mini">{{ day.count }}</div>
-        </div>
-      </div>
-    </section>
-
-    <div class="week-nav">
-      <button class="btn" aria-label="Previous week" (click)="prevWeek()">‹</button>
-      <button class="btn" aria-label="Next week" (click)="nextWeek()" [disabled]="!canGoNextWeek">›</button>
-    </div>
-  </section>
-
-  <section *ngIf="selectedTab === 'config'" class="panel config">
-    <div class="card">
-      <div class="card-head">
-        <div>
-          <div class="title-sm">Global Banner</div>
-          <div class="muted">Leave empty to hide the message bar.</div>
-        </div>
-        <button class="btn primary" (click)="persistBanner()">Save</button>
-      </div>
-      <textarea [(ngModel)]="bannerText" rows="2" placeholder="Type an announcement"></textarea>
-    </div>
-
-    <div class="card">
-      <div class="card-head">
-        <div class="title-sm">Points Structure</div>
-        <div class="actions">
-          <button class="btn" (click)="addRootAction()">+ Action</button>
-          <button class="btn" (click)="addGroup()">+ Group</button>
-          <button class="btn" [class.toggled]="movementEnabled" (click)="toggleMovement()">
-            Movement {{ movementEnabled ? 'On' : 'Off' }}
-          </button>
-        </div>
+    <section *ngIf="selectedTab === 'points'" class="panel">
+      <div class="section-head">
+        <div class="title page-title">Today's points</div>
+        <div class="count">{{ pointsDayTotal }}</div>
       </div>
 
-      <div
-        cdkDropList
-        (cdkDropListDropped)="dropRoot($event)"
-        class="config-list"
-        [cdkDropListDisabled]="!movementEnabled">
-        <div *ngFor="let item of pointItems; let i = index" cdkDrag [cdkDragDisabled]="!movementEnabled" class="config-item">
-          <div *ngIf="isAction(item)" class="config-body" [class.editing]="isEditing(item)">
-            <div class="config-summary">
-              <div class="summary-text">
-                <div class="config-title">Standalone Action</div>
-                <div class="summary-name">{{ item.name }}</div>
-                <div class="summary-meta">{{ item.points }} points</div>
-              </div>
-              <div class="summary-actions">
-                <button class="btn" (click)="toggleEdit(item)">{{ isEditing(item) ? 'Hide details' : 'Edit details' }}</button>
-                <button class="btn" (click)="duplicateAction(item, i)">Duplicate</button>
-              </div>
-              <div *ngIf="movementEnabled" cdkDragHandle class="drag-handle" aria-hidden="true">☰</div>
-            </div>
-            <div *ngIf="isEditing(item)" class="fields">
-              <label>
-                <span>Name</span>
-                <input type="text" [(ngModel)]="item.name" (ngModelChange)="updateActionName(item, $event)" />
-              </label>
-              <label>
-                <span>Points</span>
-                <input type="number" [(ngModel)]="item.points" (ngModelChange)="updateActionPoints(item, $event)" />
-              </label>
-            </div>
-            <div *ngIf="isEditing(item)" class="row-actions">
-              <button class="btn danger" (click)="removeRootAction(i)">Delete</button>
+      <div class="points-list">
+        <ng-container *ngFor="let item of pointItems">
+          <div
+            *ngIf="isAction(item)"
+            class="action-row"
+            [class.active]="pointsDayStates[item.id]"
+            (click)="toggleAction(item)">
+            <div class="text">
+              <div class="name">{{ item.name }}</div>
+              <div class="meta">{{ item.points }} points</div>
             </div>
           </div>
 
-          <div *ngIf="isGroup(item)" class="config-body" [class.editing]="isEditing(item)">
-            <div class="config-summary">
-              <div class="summary-text">
-                <div class="config-title">Group</div>
-                <div class="summary-name">{{ item.name }}</div>
-                <div class="summary-meta">{{ item.children.length }} actions</div>
-              </div>
-              <div class="summary-actions">
-                <button class="btn" (click)="toggleEdit(item)">{{ isEditing(item) ? 'Hide details' : 'Edit details' }}</button>
-                <button class="btn" (click)="duplicateGroup(i)">Duplicate</button>
-              </div>
-              <div *ngIf="movementEnabled" cdkDragHandle class="drag-handle" aria-hidden="true">☰</div>
-            </div>
-
-            <div *ngIf="isEditing(item)">
-              <label class="wide">
-                <span>Group name</span>
-                <input type="text" [(ngModel)]="item.name" (ngModelChange)="updateGroupName(item, $event)" />
-              </label>
-              <div class="row-actions">
-                <button class="btn danger" (click)="removeGroup(i)">Delete group</button>
-              </div>
+          <div *ngIf="isGroup(item)" class="group-block">
+            <div class="group-title">{{ item.name }}</div>
+            <div class="group-actions">
               <div
-                class="child-list"
-                cdkDropList
-                [cdkDropListData]="item.children"
-                (cdkDropListDropped)="dropChild(item, $event)"
-                [cdkDropListDisabled]="!movementEnabled">
-                <div
-                  *ngFor="let child of item.children; let ci = index"
-                  cdkDrag
-                  [cdkDragDisabled]="!movementEnabled"
-                  class="config-child"
-                  [class.editing]="isEditing(child)">
-                  <div class="config-summary">
-                    <div class="summary-text">
-                      <div class="summary-name">{{ child.name }}</div>
-                      <div class="summary-meta">{{ child.points }} points</div>
-                    </div>
-                    <div class="summary-actions">
-                      <button class="btn" (click)="toggleEdit(child)">{{ isEditing(child) ? 'Hide details' : 'Edit details' }}</button>
-                      <button class="btn" (click)="duplicateAction(child, ci, item)">Duplicate</button>
-                    </div>
-                    <div *ngIf="movementEnabled" cdkDragHandle class="drag-handle" aria-hidden="true">☰</div>
-                  </div>
-                  <div *ngIf="isEditing(child)" class="fields">
-                    <label>
-                      <span>Name</span>
-                      <input type="text" [(ngModel)]="child.name" (ngModelChange)="updateActionName(child, $event)" />
-                    </label>
-                    <label>
-                      <span>Points</span>
-                      <input type="number" [(ngModel)]="child.points" (ngModelChange)="updateActionPoints(child, $event)" />
-                    </label>
-                  </div>
-                  <div *ngIf="isEditing(child)" class="row-actions">
-                    <button class="btn danger" (click)="removeChildAction(item, ci)">Delete</button>
-                  </div>
+                *ngFor="let action of item.children"
+                class="action-row"
+                [class.active]="pointsDayStates[action.id]"
+                (click)="toggleAction(action)">
+                <div class="text">
+                  <div class="name">{{ action.name }}</div>
+                  <div class="meta">{{ action.points }} points</div>
                 </div>
               </div>
-              <button class="btn" (click)="addChildAction(item)">+ Add action</button>
+            </div>
+          </div>
+        </ng-container>
+        <div *ngIf="pointItems.length === 0" class="empty muted">No actions configured. Add items in Configuration.</div>
+      </div>
+
+      <section class="week points-week">
+        <div class="week-label">This Week</div>
+        <div class="range-label">{{ pointsRangeLabel }}</div>
+        <div class="week-strip points-week-strip">
+          <div
+            class="day"
+            *ngFor="let day of pointsWeekDays"
+            [class.selected]="day.key === ymd(selectedPointsDay)"
+            (click)="selectPointsDay(day.key)">
+            <div class="dow">{{ day.label }}</div>
+            <div class="mini">{{ day.count }}</div>
+          </div>
+        </div>
+      </section>
+
+      <div class="week-nav">
+        <button class="btn" aria-label="Previous week" (click)="prevPointsWeek()">‹</button>
+        <button class="btn" aria-label="Next week" (click)="nextPointsWeek()" [disabled]="!canGoNextPointsWeek">›</button>
+      </div>
+    </section>
+
+    <section *ngIf="selectedTab === 'times'" class="panel">
+      <section class="today">
+        <div class="week-label">{{ todayLabel }}</div>
+        <div class="count">{{ todayCount }}</div>
+        <button class="tap" (click)="tap()" [disabled]="tapBusy || !uid">+1</button>
+        <div class="status">{{ status || ' ' }}</div>
+      </section>
+
+      <section class="week">
+        <div class="week-label" aria-hidden="true"></div>
+        <div class="range-label">{{ rangeLabel }}</div>
+        <div class="week-strip">
+          <div class="day" *ngFor="let day of weekDays">
+            <div class="dow">{{ day.label }}</div>
+            <div class="mini">{{ day.count }}</div>
+          </div>
+        </div>
+      </section>
+
+      <div class="week-nav">
+        <button class="btn" aria-label="Previous week" (click)="prevWeek()">‹</button>
+        <button class="btn" aria-label="Next week" (click)="nextWeek()" [disabled]="!canGoNextWeek">›</button>
+      </div>
+    </section>
+
+    <section *ngIf="selectedTab === 'config'" class="panel config">
+      <div class="card">
+        <div class="card-head">
+          <div>
+            <div class="title-sm">Global Banner</div>
+            <div class="muted">Leave empty to hide the message bar.</div>
+          </div>
+          <button class="btn primary" (click)="persistBanner()">Save</button>
+        </div>
+        <textarea [(ngModel)]="bannerText" rows="2" placeholder="Type an announcement"></textarea>
+      </div>
+
+      <div class="card">
+        <div class="card-head">
+          <div class="title-sm">Points Structure</div>
+          <div class="actions">
+            <button class="btn" (click)="addRootAction()">+ Action</button>
+            <button class="btn" (click)="addGroup()">+ Group</button>
+            <button class="btn" [class.toggled]="movementEnabled" (click)="toggleMovement()">
+              Movement {{ movementEnabled ? 'On' : 'Off' }}
+            </button>
+          </div>
+        </div>
+
+        <div
+          cdkDropList
+          (cdkDropListDropped)="dropRoot($event)"
+          class="config-list"
+          [cdkDropListDisabled]="!movementEnabled">
+          <div *ngFor="let item of pointItems; let i = index" cdkDrag [cdkDragDisabled]="!movementEnabled" class="config-item">
+            <div *ngIf="isAction(item)" class="config-body" [class.editing]="isEditing(item)">
+              <div class="config-summary">
+                <div class="summary-text">
+                  <div class="config-title">Standalone Action</div>
+                  <div class="summary-name">{{ item.name }}</div>
+                  <div class="summary-meta">{{ item.points }} points</div>
+                </div>
+                <div class="summary-actions">
+                  <button class="btn" (click)="toggleEdit(item)">{{ isEditing(item) ? 'Hide details' : 'Edit details' }}</button>
+                  <button class="btn" (click)="duplicateAction(item, i)">Duplicate</button>
+                </div>
+                <div *ngIf="movementEnabled" cdkDragHandle class="drag-handle" aria-hidden="true">☰</div>
+              </div>
+              <div *ngIf="isEditing(item)" class="fields">
+                <label>
+                  <span>Name</span>
+                  <input type="text" [(ngModel)]="item.name" (ngModelChange)="updateActionName(item, $event)" />
+                </label>
+                <label>
+                  <span>Points</span>
+                  <input type="number" [(ngModel)]="item.points" (ngModelChange)="updateActionPoints(item, $event)" />
+                </label>
+              </div>
+              <div *ngIf="isEditing(item)" class="row-actions">
+                <button class="btn danger" (click)="removeRootAction(i)">Delete</button>
+              </div>
+            </div>
+
+            <div *ngIf="isGroup(item)" class="config-body" [class.editing]="isEditing(item)">
+              <div class="config-summary">
+                <div class="summary-text">
+                  <div class="config-title">Group</div>
+                  <div class="summary-name">{{ item.name }}</div>
+                  <div class="summary-meta">{{ item.children.length }} actions</div>
+                </div>
+                <div class="summary-actions">
+                  <button class="btn" (click)="toggleEdit(item)">{{ isEditing(item) ? 'Hide details' : 'Edit details' }}</button>
+                  <button class="btn" (click)="duplicateGroup(i)">Duplicate</button>
+                </div>
+                <div *ngIf="movementEnabled" cdkDragHandle class="drag-handle" aria-hidden="true">☰</div>
+              </div>
+
+              <div *ngIf="isEditing(item)">
+                <label class="wide">
+                  <span>Group name</span>
+                  <input type="text" [(ngModel)]="item.name" (ngModelChange)="updateGroupName(item, $event)" />
+                </label>
+                <div class="row-actions">
+                  <button class="btn danger" (click)="removeGroup(i)">Delete group</button>
+                </div>
+                <div
+                  class="child-list"
+                  cdkDropList
+                  [cdkDropListData]="item.children"
+                  (cdkDropListDropped)="dropChild(item, $event)"
+                  [cdkDropListDisabled]="!movementEnabled">
+                  <div
+                    *ngFor="let child of item.children; let ci = index"
+                    cdkDrag
+                    [cdkDragDisabled]="!movementEnabled"
+                    class="config-child"
+                    [class.editing]="isEditing(child)">
+                    <div class="config-summary">
+                      <div class="summary-text">
+                        <div class="summary-name">{{ child.name }}</div>
+                        <div class="summary-meta">{{ child.points }} points</div>
+                      </div>
+                      <div class="summary-actions">
+                        <button class="btn" (click)="toggleEdit(child)">{{ isEditing(child) ? 'Hide details' : 'Edit details' }}</button>
+                        <button class="btn" (click)="duplicateAction(child, ci, item)">Duplicate</button>
+                      </div>
+                      <div *ngIf="movementEnabled" cdkDragHandle class="drag-handle" aria-hidden="true">☰</div>
+                    </div>
+                    <div *ngIf="isEditing(child)" class="fields">
+                      <label>
+                        <span>Name</span>
+                        <input type="text" [(ngModel)]="child.name" (ngModelChange)="updateActionName(child, $event)" />
+                      </label>
+                      <label>
+                        <span>Points</span>
+                        <input type="number" [(ngModel)]="child.points" (ngModelChange)="updateActionPoints(child, $event)" />
+                      </label>
+                    </div>
+                    <div *ngIf="isEditing(child)" class="row-actions">
+                      <button class="btn danger" (click)="removeChildAction(item, ci)">Delete</button>
+                    </div>
+                  </div>
+                </div>
+                <button class="btn" (click)="addChildAction(item)">+ Add action</button>
+              </div>
             </div>
           </div>
         </div>
       </div>
-    </div>
-  </section>
+    </section>
+  </div>
+
+  <nav class="tabs bottom-nav" role="tablist" aria-label="Main navigation">
+    <button
+      *ngFor="let tab of tabs"
+      class="tab"
+      role="tab"
+      [attr.aria-selected]="selectedTab === tab.key"
+      [class.active]="selectedTab === tab.key"
+      (click)="selectedTab = tab.key">
+      {{ tab.label }}
+    </button>
+  </nav>
 </main>
