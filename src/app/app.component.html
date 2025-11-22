@@ -3,9 +3,15 @@
     <div *ngIf="bannerText" class="banner">{{ bannerText }}</div>
 
     <section *ngIf="selectedTab === 'points'" class="panel">
-      <div class="section-head">
-        <div class="title page-title">Today's points</div>
-        <div class="count">{{ pointsDayTotal }}</div>
+      <div class="count-cards">
+        <div class="count-card">
+          <div class="title page-title">Today's points</div>
+          <div class="count">{{ pointsDayTotal }}</div>
+        </div>
+        <div class="count-card session" (dblclick)="setSessionPoints(ymd(selectedPointsDay), 0)">
+          <div class="title page-title">Session points</div>
+          <div class="count">{{ sessionPoints }}</div>
+        </div>
       </div>
 
       <div class="points-list">
