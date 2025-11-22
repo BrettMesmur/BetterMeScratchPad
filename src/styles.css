@@ -81,6 +81,20 @@ body {
 .status { color: var(--muted); font-size: 13px; text-align: center; margin-top: 2px }
 
 .section-head { text-align: center; display: grid; gap: 6px; }
+.count-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; align-items: stretch; }
+.count-card {
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 12px;
+  background: #f8fafc;
+  display: grid;
+  gap: 6px;
+  justify-items: center;
+}
+.count-card .title { font-size: 18px; }
+.count-card.session { cursor: pointer; transition: transform .1s ease, box-shadow .2s ease; }
+.count-card.session:hover { box-shadow: 0 8px 20px var(--ring); }
+.count-card.session:active { transform: translateY(1px); }
 .week { margin-top: 6px; padding-top: 10px; border-top: 1px dashed #e5e7eb; display: grid; gap: 10px; }
 .week-label { color: var(--muted); font-size: 13px; text-align: center }
 .range-label {

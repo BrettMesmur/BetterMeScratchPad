@@ -93,6 +93,7 @@ export class AppComponent implements OnInit, OnDestroy {
   pointItems: PointRootItem[] = [];
   pointsDayStates: Record<string, boolean> = {};
   pointsDayTotal = 0;
+  sessionPoints = 0;
   selectedPointsDay = startOfDay(new Date());
   selectedPointsDayLabel = '';
   pointsWeekDays: WeekDay[] = [];
@@ -110,6 +111,7 @@ export class AppComponent implements OnInit, OnDestroy {
   private readonly auth = getAuth(this.app);
   private readonly db = getDatabase(this.app);
   private readonly localConfigKey = 'betterme_points_config';
+  private readonly sessionPointsKey = 'betterme_session_points';
   private readonly permissionDeniedCodes = ['PERMISSION_DENIED', 'permission_denied'];
   private todayRef?: DatabaseReference;
   private todayUnsubscribe?: Unsubscribe;
@@ -124,6 +126,7 @@ export class AppComponent implements OnInit, OnDestroy {
   constructor() {
     this.todayLabel = `Today • ${nice(this.today)}`;
     this.selectedPointsDayLabel = nice(this.selectedPointsDay);
+    this.sessionPoints = this.loadSessionPoints(ymd(this.selectedPointsDay));
     this.prepareWeekDays();
     this.preparePointsWeekDays();
   }
@@ -186,6 +189,7 @@ export class AppComponent implements OnInit, OnDestroy {
     const refPath = ref(this.db, `users/${this.uid}/points/days/${dayKey}`);
     const prevStates = { ...this.pointsDayStates };
     const prevTotal = this.pointsDayTotal;
+    const prevSessionPoints = this.sessionPoints;
 
     if (this.toggleLocks[action.id]) return;
     this.toggleLocks = { ...this.toggleLocks, [action.id]: true };
@@ -222,6 +226,9 @@ export class AppComponent implements OnInit, OnDestroy {
       this.pointsDayStates = val.actions || {};
       this.pointsDayTotal = Number(val.total) || 0;
       this.pointsWeekDays = this.pointsWeekDays.map((day) => day.key === dayKey ? { ...day, count: this.pointsDayTotal } : day);
+
+      const delta = (prevStates[action.id] ? -1 : 1) * action.points;
+      this.setSessionPoints(dayKey, Math.max(0, this.sessionPoints + delta));
     } catch (e) {
       console.error('Toggle failed', e);
       const msg = this.isPermissionDenied(e)
@@ -231,6 +238,7 @@ export class AppComponent implements OnInit, OnDestroy {
       this.pointsDayStates = prevStates;
       this.pointsDayTotal = prevTotal;
       this.pointsWeekDays = this.pointsWeekDays.map((day) => day.key === dayKey ? { ...day, count: prevTotal } : day);
+      this.sessionPoints = prevSessionPoints;
     } finally {
       const { [action.id]: _, ...rest } = this.toggleLocks;
       this.toggleLocks = rest;
@@ -262,6 +270,7 @@ export class AppComponent implements OnInit, OnDestroy {
   selectPointsDay(dayKey: string): void {
     this.selectedPointsDay = dateFromYmd(dayKey);
     this.selectedPointsDayLabel = nice(this.selectedPointsDay);
+    this.sessionPoints = this.loadSessionPoints(dayKey);
     this.attachPointsDayListener();
   }
 
@@ -481,6 +490,7 @@ export class AppComponent implements OnInit, OnDestroy {
     if (!this.uid) return;
     const dayKey = ymd(this.selectedPointsDay);
     this.pointsDayRef = ref(this.db, `users/${this.uid}/points/days/${dayKey}`);
+    this.sessionPoints = this.loadSessionPoints(dayKey);
     this.pointsDayUnsubscribe?.();
     this.pointsDayUnsubscribe = onValue(this.pointsDayRef, (snap) => {
       const val = snap.exists() ? snap.val() as PointsDayData : { total: 0, actions: {} };
@@ -628,6 +638,36 @@ export class AppComponent implements OnInit, OnDestroy {
     } catch (e) {
       console.error('Failed to read local config', e);
       return null;
+    }
+  }
+
+  setSessionPoints(dayKey: string, value: number): void {
+    this.sessionPoints = value;
+    this.persistSessionPoints(dayKey, value);
+  }
+
+  private persistSessionPoints(dayKey: string, value: number): void {
+    if (typeof localStorage === 'undefined') return;
+    try {
+      const raw = localStorage.getItem(this.sessionPointsKey);
+      const parsed = raw ? JSON.parse(raw) as Record<string, number> : {};
+      const next = { ...parsed, [dayKey]: value };
+      localStorage.setItem(this.sessionPointsKey, JSON.stringify(next));
+    } catch (e) {
+      console.error('Failed to persist session points', e);
+    }
+  }
+
+  private loadSessionPoints(dayKey: string): number {
+    if (typeof localStorage === 'undefined') return 0;
+    try {
+      const raw = localStorage.getItem(this.sessionPointsKey);
+      if (!raw) return 0;
+      const parsed = JSON.parse(raw) as Record<string, number>;
+      return Number.isFinite(parsed?.[dayKey]) ? parsed[dayKey] : 0;
+    } catch (e) {
+      console.error('Failed to load session points', e);
+      return 0;
     }
   }
 }
